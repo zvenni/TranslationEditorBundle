@@ -1,23 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+<head>
     <meta charset="utf-8">
-    <title>Symfony2 Translations Editor</title>
+    <title>LOVOO Translations</title>
     <meta name="description" content="">
-    <meta name="author" content="">
+    <meta name="author" content="Sven Schwerdtfeger">
 
     <!-- Le HTML5 shim, for IE6-8 support of HTML elements -->
     <!--[if lt IE 9]>
-      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
 
     <!-- Le styles -->
-      <link rel="stylesheet" href="http://twitter.github.com/bootstrap/1.4.0/bootstrap.min.css">
+    <link rel="stylesheet" href="http://twitter.github.com/bootstrap/1.4.0/bootstrap.min.css">
     <style type="text/css">
-      body {
-        padding-top: 60px;
-      }
+        body {
+            padding-top: 60px;
+        }
     </style>
 
     <!-- Le fav and touch icons -->
@@ -25,42 +25,58 @@
     <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
     <link rel="apple-touch-icon" sizes="72x72" href="images/apple-touch-icon-72x72.png">
     <link rel="apple-touch-icon" sizes="114x114" href="images/apple-touch-icon-114x114.png">
-  </head>
+</head>
 
-  <body>
-    <div class="topbar">
-      <div class="topbar-inner">
+<body>
+<div class="topbar">
+    <div class="topbar-inner">
         <div class="container-fluid">
-          <a class="brand" href="#">Symfony2 Translation Editor</a>
-          <ul class="nav">
-            <li><a href="#" onclick="$('.alert-message').hide();$('#newtranslation').show();$('#key').focus()">New Entry</a></li>
-            <li><a href="#" onclick="this.innerHTML = 'Reloading...';window.location.reload()">Reload List</a></li>
-            <li><a href="https://github.com/servergrove/TranslationEditorBundle">About</a></li>
-          </ul>
+            <a class="brand" href="#">Symfony2 Translation Editor</a>
+            <ul class="nav">
+                <li><a href="#" onclick="$('.alert-message').hide();$('#newtranslation').show();$('#key').focus(); return false;">New Entry</a></li>
+                <li><a href="#" onclick="this.innerHTML = 'Reloading...';window.location.reload(); return false;">Reload List</a></li>
+                <li><a href="https://github.com/servergrove/TranslationEditorBundle">About</a></li>
+            </ul>
         </div>
-      </div>
     </div>
+</div>
 
-    <div class="container-fluid">
-      <div class="sidebar">
+<div class="container-fluid">
+    <div class="sidebar">
         <div class="well">
-          <h5>Available Locales</h5>
-          <ul>
-              {% for locale, v in locales %}
-              <li>{{locale}} {% if locale == default %}<span class="label">Default</span>{%endif%}</li>
-              {%endfor%}
-          </ul>
-        {% block sidebar %}
-        {% endblock %}
+            <h5>File Overview</h5>
+            <ul>
+                {% for bname, bundle in sidebar %}
+                <h6 style="color:#111111;">{{bname}}</h6>
+
+                {% for lib in  bundle %}
+                <a href="{{path("sg_localeditor_list", {"bundle": bname, "lib":lib} ) }}">{{lib}}</a><br>
+                {% endfor%}
+
+                {%endfor%}
+            </ul>
+
 
         </div>
-      </div>
-      <div class="content">
-          {% block body %}
-          {% endblock %}
-    </div>
-    </div>
 
-  </body>
+        <div class="well">
+            <h5>Available Locales</h5>
+            <ul>
+                {% for locale in trlKeys.locales %}
+                <li>{{locale}} {% if locale == trlKeys.default %}<span class="label">Default</span>{%endif%}</li>
+                {%endfor%}
+            </ul>
+            {% block sidebar %}
+            {% endblock %}
+
+        </div>
+    </div>
+    <div class="content">
+        {% block body %}
+        {% endblock %}
+    </div>
+</div>
+
+</body>
 
 </html>

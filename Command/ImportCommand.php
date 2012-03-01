@@ -7,7 +7,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Finder\Finder;
-use Symfony\Component\Yaml\Parser;
+use Symfony\Component\Translation\Loader\YamlFileLoader;
 
 /**
  * Command for importing translation files
@@ -21,11 +21,10 @@ class ImportCommand extends Base
         parent::configure();
 
         $this
-        ->setName('locale:editor:import')
-        ->setDescription('Import translation files into MongoDB for using through /translations/editor')
-        ->addArgument('filename')
-        ->addOption("dry-run")
-        ;
+            ->setName('locale:editor:import')
+            ->setDescription('Import translation files into MongoDB for using through /translations/editor')
+            ->addArgument('filename')
+            ->addOption("dry-run");
 
     }
 
@@ -44,14 +43,14 @@ class ImportCommand extends Base
             $finder->files()->in($filename)->name('*');
 
             foreach ($finder as $file) {
-                $output->writeln("Found <info>".$file->getRealpath()."</info>...");
+                $output->writeln("Found <info>" . $file->getRealpath() . "</info>...");
                 $files[] = $file->getRealpath();
             }
 
         } else {
-            $dir = $this->getContainer()->getParameter('kernel.root_dir').'/../src';
+            $dir = $this->getContainer()->getParameter('kernel.root_dir') . '/../src';
 
-            $output->writeln("Scanning ".$dir."...");
+            $output->writeln("Scanning " . $dir . "...");
             $finder = new Finder();
             $finder->directories()->in($dir)->name('translations');
 
@@ -59,7 +58,7 @@ class ImportCommand extends Base
                 $finder2 = new Finder();
                 $finder2->files()->in($dir->getRealpath())->name('*');
                 foreach ($finder2 as $file) {
-                    $output->writeln("Found <info>".$file->getRealpath()."</info>...");
+                    $output->writeln("Found <info>" . $file->getRealpath() . "</info>...");
                     $files[] = $file->getRealpath();
                 }
             }
@@ -70,8 +69,8 @@ class ImportCommand extends Base
             return;
         }
         $output->writeln(sprintf("Found %d files, importing...", count($files)));
-        
-        foreach($files as $filename) {
+
+        foreach ($files as $filename) {
             $this->import($filename);
         }
 
@@ -80,31 +79,34 @@ class ImportCommand extends Base
     public function import($filename)
     {
         $fname = basename($filename);
-        $this->output->writeln("Processing <info>".$filename."</info>...");
+
+        $this->output->writeln("Processing <info>" . $filename . "</info>...");
 
         list($name, $locale, $type) = explode('.', $fname);
 
         $this->setIndexes();
 
-        switch($type) {
+        switch ($type) {
             case 'yml':
-                $yaml = new Parser();
-                $value = $yaml->parse(file_get_contents($filename));
+                $m = $this->getContainer()->get('server_grove_translation_editor.storage_manager');
+                $lib = $m->extractLib($filename);
+                $entries = $this->concludeEntries($filename, $locale, $lib);
 
-                $data = $this->getContainer()->get('server_grove_translation_editor.storage_manager')->getCollection()->findOne(array('filename'=>$filename));
+                $data = $m->getCollection()->findOne(array('filename' => $filename));
+
                 if (!$data) {
                     $data = array(
                         'filename' => $filename,
+                        "bundle" => $m->extractBundle($filename),
+                        "lib" => $lib,
                         'locale' => $locale,
                         'type' => $type,
-                        'entries' => array(),
+                        'entries' => $entries,
                     );
 
                 }
 
-                $this->output->writeln("  Found ".count($value)." entries...");
-                $data['entries'] = $value;
-
+                $this->output->writeln("  Found " . count($entries) . " entries...");
                 if (!$this->input->getOption('dry-run')) {
                     $this->updateValue($data);
                 }
@@ -115,10 +117,17 @@ class ImportCommand extends Base
         }
     }
 
+    private function concludeEntries($filename, $locale, $lib)
+    {
+        $yamlFileLoader = new YamlFileLoader();
+        $entries = $yamlFileLoader->load($filename, $locale, $lib)->all($lib);
+        return $entries;
+    }
+
     protected function setIndexes()
     {
         $collection = $this->getContainer()->get('server_grove_translation_editor.storage_manager')->getCollection();
-        $collection->ensureIndex( array( "filename" => 1, 'locale' => 1 ) );
+        $collection->ensureIndex(array("filename" => 1, 'locale' => 1));
     }
 
     protected function updateValue($data)

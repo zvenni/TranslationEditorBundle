@@ -1,6 +1,10 @@
 sg_localeditor_list:
     pattern:  /translations/editor
     defaults: { _controller: ServerGroveTranslationEditorBundle:Editor:list }
+    requirements:
+        _method:  GET
+
+
 
 sg_localeditor_update:
     pattern:  /translations/update
