@@ -93,12 +93,6 @@ class MongoStorageManager extends ContainerAware
         $this->setQuery((array)$query);
         $cursor = $this->getCursor();
 
-        /* if (isset($query['page'])) {
-            $limit = 20;
-            $skip = (int)($limit * ($page - 1));
-            $limit = $docs_per_page;
-        }*/
-
         $results = array();
         while ($cursor->hasNext()) {
             $results[] = $cursor->getNext();
@@ -107,7 +101,7 @@ class MongoStorageManager extends ContainerAware
         return (array)$results;
     }
 
-    public function updateData(array$data)
+    public function updateData(array $data)
     {
         $this->getCollection()->update(
             array('_id' => $data['_id'])
@@ -256,6 +250,33 @@ class MongoStorageManager extends ContainerAware
         return $count;
     }
 
+    public function getEntriesByBundleAndLibPrepared($bundle, $lib)
+    {
+        $data = $this->getEntriesByBundleAndLib($bundle, $lib);
+        $trlEntryCollection = $this->prepareData($data);
+        $missing = $this->getMissingOverview($trlEntryCollection);
+
+        $default = $this->getDefaultLanguage();
+        $locales = $this->getUsedLocales();
+
+        $returnAr['default'] = $default;
+        $returnAr['missing'] = $missing;
+        $returnAr['lib'] = $lib;
+        $returnAr['bundle'] = $bundle;
+        $returnAr['locales'] = $locales;
+        $returnAr['entries'] = $trlEntryCollection;
+
+        return $returnAr;
+    }
+
+    public function getEntriesByBundleAndLocalAndLib($bundle, $locale, $lib)
+    {
+        $query = array("bundle" => $bundle, "locale" => $locale, "lib" => $lib);
+        $this->setQuery($query);
+        $result = (array)$this->getCollection()->findOne($this->getQuery());
+
+        return $result;
+    }
 
     public function getEntriesByBundleAndLib($bundle, $lib)
     {
@@ -294,6 +315,24 @@ class MongoStorageManager extends ContainerAware
         return $returnAr;
     }
 
+
+    ############################################################################
+    ########################    data - missing   ###############################
+    ############################################################################
+
+    public function getAllMissingEntriesPrepared()
+    {
+        $missing = $this->prepareMissingDataGlobal();
+        $default = $this->getDefaultLanguage();
+        $locales = $this->getUsedLocales();
+
+        $returnAr['entriesCount'] = $this->countMissing($missing);
+        $returnAr['locales'] = $locales;
+        $returnAr['default'] = $default;
+        $returnAr['entries'] = $missing;
+
+        return $returnAr;
+    }
 
     private function prepareMissingDataGlobal()
     {
@@ -342,43 +381,7 @@ class MongoStorageManager extends ContainerAware
         return $count;
     }
 
-
-    public function getAllMissingEntriesPrepared()
-    {
-        $missing = $this->prepareMissingDataGlobal();
-        $default = $this->getDefaultLanguage();
-        $locales = $this->getUsedLocales();
-
-        $returnAr['entriesCount'] = $this->countMissing($missing);
-        $returnAr['locales'] = $locales;
-        $returnAr['default'] = $default;
-        $returnAr['entries'] = $missing;
-
-        #td($returnAr);
-        return $returnAr;
-    }
-
-    public function getEntriesByBundleAndLibPrepared($bundle, $lib)
-    {
-        $data = $this->getEntriesByBundleAndLib($bundle, $lib);
-        $trlEntryCollection = $this->prepareData($data);
-        $missing = $this->getMissingOverview($trlEntryCollection);
-
-        $default = $this->getDefaultLanguage();
-        $locales = $this->getUsedLocales();
-
-        $returnAr['default'] = $default;
-        $returnAr['missing'] = $missing;
-        $returnAr['lib'] = $lib;
-        $returnAr['bundle'] = $bundle;
-        $returnAr['locales'] = $locales;
-        $returnAr['entries'] = $trlEntryCollection;
-
-        return $returnAr;
-    }
-
-
-    public function getMissingOverview(&$trlEntry)
+    private function getMissingOverview(&$trlEntry)
     {
         $default = $this->getDefaultLanguage();
         $locales = $this->getUsedLocales();
@@ -403,14 +406,6 @@ class MongoStorageManager extends ContainerAware
         return $missing;
     }
 
-    public
-    function getEntriesByBundleAndLocalAndLib($bundle, $locale, $lib)
-    {
-        $query = array("bundle" => $bundle, "locale" => $locale, "lib" => $lib);
-        $this->setQuery($query);
-        $result = (array)$this->getCollection()->findOne($this->getQuery());
 
-        return $result;
-    }
 
 }

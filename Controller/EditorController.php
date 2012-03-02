@@ -39,13 +39,9 @@ class EditorController extends Controller
         $request = $this->getRequest();
         $bundle = ucfirst($request->get("bundle"));
         $lib = strtolower($request->get("lib"));
-
-        if (!$lib || !$bundle) {
-            return $this->redirect($this->generateUrl("sg_localeditor_list_global"));
-        }
-
         $bundle = $bundle ? $bundle : "CoreBundle";
         $lib = $lib ? $lib : "messages";
+        //fetch data
         $trlKeys = $m->getEntriesByBundleAndLibPrepared($bundle, $lib);
         //sidebar menu
         $sidebar = $this->sideBar();
@@ -57,7 +53,7 @@ class EditorController extends Controller
         );
     }
 
-    public function listGlobalAction()
+    public function listMissingGlobalAction()
     {
         /** @var $m \ServerGrove\Bundle\TranslationEditorBundle\MongoStorageManager */
         $m = $this->getManager();
@@ -65,7 +61,7 @@ class EditorController extends Controller
         //sidebar menu
         $sidebar = $this->sideBar();
 
-        return $this->render('ServerGroveTranslationEditorBundle:Editor:list_global.html.twig', array(
+        return $this->render('ServerGroveTranslationEditorBundle:Editor:list_missing_global.html.twig', array(
                 'trlKeys' => $trlKeys,
                 "sidebar" => $sidebar,
             )
@@ -77,13 +73,12 @@ class EditorController extends Controller
         /** @var $m \ServerGrove\Bundle\TranslationEditorBundle\MongoStorageManager */
         $m = $this->getManager();
         $bundles = $m->getBundlesWithTranslations();
-
         $sidebar = array();
+
         foreach ($bundles as $key => $bundle) {
             $sidebar['data'][$bundle] = $m->getFileOverviewByBundle($bundle);
         }
-
-        $sidebar['link']['listGlobal'] = $this->generateUrl("sg_localeditor_list_global");
+        $sidebar['link']['listMissingGlobal'] = $this->generateUrl("sg_localeditor_list_missing_global");
 
         return $sidebar;
     }
@@ -104,7 +99,6 @@ class EditorController extends Controller
                     $m->updateData($data);
                 }
             }
-
             $res = array('result' => true);
 
             return new \Symfony\Component\HttpFoundation\Response(json_encode($res));
@@ -168,19 +162,18 @@ class EditorController extends Controller
             $m = $this->getManager();
             $values = $m->getEntriesByBundleAndLocalAndLib($bundle, $locale, $lib);
             //das document gibts noch gornie (z.b lib.de.yml ex. aber lib.en.yml nicht)
-            if ( !$values ) {
+            if (!$values) {
                 $values['bundle'] = $bundle;
                 $values['lib'] = $lib;
                 $values['locale'] = $locale;
                 $values['type'] = "yml";
                 $values['entries'][$key] = $val;
                 $m->insertData($values);
-            } else  {
+            } else {
                 $values['entries'][$key] = $val;
                 $m->updateData($values);
             }
             //überschreibe nmit new
-
 
 
             $res = array(

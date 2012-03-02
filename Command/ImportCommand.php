@@ -98,6 +98,7 @@ class ImportCommand extends Base
                     $data = array(
                         'filename' => $filename,
                         "bundle" => $m->extractBundle($filename),
+                        "dateImport" => new \DateTime(),
                         "lib" => $lib,
                         'locale' => $locale,
                         'type' => $type,

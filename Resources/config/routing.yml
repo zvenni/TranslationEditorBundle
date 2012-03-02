@@ -4,9 +4,9 @@ sg_localeditor_list:
     requirements:
         _method:  GET
 
-sg_localeditor_list_global:
-    pattern:  /translations/editor/
-    defaults: { _controller: ServerGroveTranslationEditorBundle:Editor:listGlobal }
+sg_localeditor_list_missing_global:
+    pattern:  /translations/editor/global/missing
+    defaults: { _controller: ServerGroveTranslationEditorBundle:Editor:listMissingGlobal }
 
 
 sg_localeditor_update:

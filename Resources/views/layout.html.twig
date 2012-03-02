@@ -44,8 +44,7 @@
 <div class="container-fluid">
     <div class="sidebar">
         <div class="well">
-            <input id="remove-10" class=" btn success" type="button" onclick="location.href='{{sidebar.link.listGlobal}}'; return false" value="Missing global >">
-
+            <input id="remove-10" class=" btn success" type="button" onclick="location.href='{{sidebar.link.listMissingGlobal}}'; return false" value="Missing global >">
             <h5>File Overview</h5>
             <ul>
                 {% for bname, bundle in sidebar.data %}
