@@ -31,7 +31,7 @@
 <div class="topbar">
     <div class="topbar-inner">
         <div class="container-fluid">
-            <a class="brand" href="#">Symfony2 Translation Editor</a>
+            <a class="brand" href="#">LOVOO Translation Editor</a>
             <ul class="nav">
                 <li><a href="#" onclick="$('.alert-message').hide();$('#newtranslation').show();$('#key').focus(); return false;">New Entry</a></li>
                 <li><a href="#" onclick="this.innerHTML = 'Reloading...';window.location.reload(); return false;">Reload List</a></li>
@@ -44,21 +44,19 @@
 <div class="container-fluid">
     <div class="sidebar">
         <div class="well">
+            <input id="remove-10" class=" btn success" type="button" onclick="location.href='{{sidebar.link.listGlobal}}'; return false" value="Missing global >">
+
             <h5>File Overview</h5>
             <ul>
-                {% for bname, bundle in sidebar %}
+                {% for bname, bundle in sidebar.data %}
                 <h6 style="color:#111111;">{{bname}}</h6>
 
-                {% for lib in  bundle %}
-                <a href="{{path("sg_localeditor_list", {"bundle": bname, "lib":lib} ) }}">{{lib}}</a><br>
+                {% for file in  bundle %}
+                <a href="{{path("sg_localeditor_list", {"bundle": bname, "lib":file.lib} ) }}">{{file.lib}} ({{file.entryCount}})</a><br>
                 {% endfor%}
-
                 {%endfor%}
             </ul>
-
-
         </div>
-
         <div class="well">
             <h5>Available Locales</h5>
             <ul>

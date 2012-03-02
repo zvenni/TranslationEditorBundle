@@ -9,18 +9,18 @@ use Symfony\Component\Yaml\Yaml;
 
 class MongoStorageManager extends ContainerAware
 {
+
+    ############################################################################
+    ########################      CLASS     ####################################
+    ############################################################################
+
     protected $mongo;
 
-    protected $query;
+    protected $query = array();
 
     public function __construct(ContainerInterface $container)
     {
         $this->setContainer($container);
-    }
-
-    public function getLocales()
-    {
-
     }
 
     private function getContainer()
@@ -29,23 +29,22 @@ class MongoStorageManager extends ContainerAware
     }
 
 
-    private function getQuery()
+    private function getDefaultLanguage()
     {
-        return $this->query;
+        //if english is needed
+        #return $this->container->getParameter('locale', 'en');
+        return $this->getContainer()->get("service_container")->getParameter("kernel.default_locale");
     }
 
-    private function setQuery(array $query)
-    {
-        $this->query = $query;
-    }
-
+    ############################################################################
+    ########################      db        ####################################
+    ############################################################################
 
     public function getMongo()
     {
         if (!$this->mongo) {
             $this->mongo = new \Mongo($this->container->getParameter('translation_editor.mongodb'));
         }
-
         if (!$this->mongo) {
             throw new \Exception("failed to connect to mongo");
         }
@@ -53,7 +52,7 @@ class MongoStorageManager extends ContainerAware
         return $this->mongo;
     }
 
-    public function getDB()
+    private function getDB()
     {
         return $this->getMongo()->translations;
     }
@@ -66,7 +65,22 @@ class MongoStorageManager extends ContainerAware
     private function getCursor()
     {
         return $this->getCollection()->find($this->getQuery());
+    }
 
+    private function getCount(array $query)
+    {
+        $this->setQuery($query);
+        return $this->getCursor()->count();
+    }
+
+    private function getQuery()
+    {
+        return $this->query;
+    }
+
+    private function setQuery(array $query)
+    {
+        $this->query = $query;
     }
 
     private function getFinder()
@@ -74,20 +88,40 @@ class MongoStorageManager extends ContainerAware
         return new Finder();
     }
 
-    private function getResults(array $query)
+    private function getResults($query = array())
     {
-        $this->setQuery($query);
-
+        $this->setQuery((array)$query);
         $cursor = $this->getCursor();
 
-        $results = array();
+        /* if (isset($query['page'])) {
+            $limit = 20;
+            $skip = (int)($limit * ($page - 1));
+            $limit = $docs_per_page;
+        }*/
 
+        $results = array();
         while ($cursor->hasNext()) {
             $results[] = $cursor->getNext();
         }
 
         return (array)$results;
     }
+
+    public function updateData(array$data)
+    {
+        $this->getCollection()->update(
+            array('_id' => $data['_id'])
+            , $data, array('upsert' => true));
+    }
+
+    public function insertData(array$data)
+    {
+        $this->getCollection()->insert($data);
+    }
+
+    ############################################################################
+    ####################     FILE           ####################################
+    ############################################################################
 
     private function getSourceDir()
     {
@@ -102,6 +136,45 @@ class MongoStorageManager extends ContainerAware
         return $finder;
     }
 
+    ############################################################################
+    ########################    parse/check          ###########################
+    ############################################################################
+
+    private function isAlphabetic($key)
+    {
+        //all signs but alphabetics/whitespace
+        $forbiddenSigns = "/[^a-zA-z\s]+/";
+        if (preg_match($forbiddenSigns, $key)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    public function extractLib($filename)
+    {
+        preg_match("/[^\/]+$/", $filename, $file);
+        list($lib, $a, $b) = explode('.', $file[0]);
+        return $lib;
+    }
+
+    public function extractBundle($filename)
+    {
+        preg_match("/[^\/]*Bundle/", $filename, $bundle);
+        return $bundle[0];
+    }
+
+    private function extractLocaleFromFilename($filename)
+    {
+        $fileExplode = explode(".", $filename);
+        end($fileExplode);
+        return prev($fileExplode);
+    }
+
+    ############################################################################
+    ########################    data                ############################
+    ############################################################################
+
     public function getBundlesWithTranslations()
     {
         $finder = $this->getTranslationFinder();
@@ -110,14 +183,14 @@ class MongoStorageManager extends ContainerAware
         foreach ($finder as $bundle) {
             $bundles[] = $this->extractBundle($bundle->getPath());
         }
+        natcasesort($bundles);
 
         return $bundles;
     }
 
-
-    public function getBundleLocales($bundle)
+    public function getUsedLocales()
     {
-        $dir = $this->getSourceDir() . "/Kiss/" . $bundle;
+        $dir = $this->getSourceDir() . "/Kiss";
         $finder = $this->getFinder();
         $finder->directories()->in($dir)->name('translations');
 
@@ -139,11 +212,18 @@ class MongoStorageManager extends ContainerAware
         return $locales;
     }
 
-    private function extractLocaleFromFilename($filename)
+
+    public function getFileOverviewByBundle($bundle)
     {
-        $fileExplode = explode(".", $filename);
-        end($fileExplode);
-        return prev($fileExplode);
+        $bundleFiles = $this->getFilesByBundle($bundle);
+        $overviewAr = array();
+        foreach ($bundleFiles as $lib) {
+            $fileOverview['lib'] = $lib;
+            $fileOverview['entryCount'] = $this->getEntriesCountByBundleAndLib($bundle, $lib);
+            $overviewAr[] = $fileOverview;
+        }
+
+        return $overviewAr;
     }
 
     public function getFilesByBundle($bundle)
@@ -160,50 +240,157 @@ class MongoStorageManager extends ContainerAware
             }
 
         }
+        natcasesort($bundleFiles);
 
         return $bundleFiles;
     }
 
+    public function getEntriesCountByBundleAndLib($bundle, $lib)
+    {
+        $results = $this->getEntriesByBundleAndLib($bundle, $lib);
+        $count = 0;
+        foreach ($results as $content) {
+            $count = max($count, count($content['entries']));
+        }
+
+        return $count;
+    }
+
+
     public function getEntriesByBundleAndLib($bundle, $lib)
     {
         $query = array("bundle" => $bundle, "lib" => $lib);
-
         $results = $this->getResults($query);
-        #td($results);
+
         return $results;
     }
 
-
-    private function getDefaultLanguage()
+    private function prepareData($data)
     {
-        return $this->getContainer()->getParameter('locale', 'de');
-    }
-
-    public function getEntriesByBundleAndLibPrepared($bundle, $lib)
-    {
-        $locales = $this->getBundleLocales($bundle);
-        $data = $this->getEntriesByBundleAndLib($bundle, $lib);
-
-        $keyAr = array();
+        $trlEntryCollection = array();
         foreach ($data as $d) {
             $entries = $d['entries'];
             $dloc = $d['locale'];
             if (is_array($entries)) {
                 foreach ($entries as $key => $entry) {
-                    $keyAr[$key][$dloc] = $entry;
+                    $trlEntryCollection[$key][$dloc] = $entry;
                 }
             }
         }
 
-        $missing = array();
+        return $trlEntryCollection;
+    }
+
+    private function findBundles($data)
+    {
+        $returnAr = array();
+        foreach ($data as $d) {
+            $bundle = $d['bundle'];
+            if (!in_array($bundle, $returnAr)) {
+                $returnAr[] = $bundle;
+            }
+        }
+
+        return $returnAr;
+    }
+
+
+    private function prepareMissingDataGlobal()
+    {
+        $data = $this->getResults();
+        $bundleAr = $this->findBundles($data);
+        foreach ($bundleAr as $bundle) {
+            $fileAr[$bundle] = $this->getFilesByBundle($bundle);
+        }
+        $returnMissing = array();
+        foreach ($fileAr as $bundle => $libs) {
+            foreach ($libs as $lib) {
+                $libEntries = $this->getEntriesByBundleAndLibPrepared($bundle, $lib);
+                if ($libEntries = $this->extractFullfilledEntries($libEntries)) {
+                    $returnMissing[] = $libEntries;
+                }
+            }
+        }
+
+        return $returnMissing;
+    }
+
+    private function extractFullfilledEntries($trlEntryCollection)
+    {
+        foreach ($trlEntryCollection['entries'] as $key => $val) {
+            if (!isset($trlEntryCollection['missing']['entries'][$key])) {
+                unset($trlEntryCollection['entries'][$key]);
+            }
+        }
+
+        $trlEntryCollection['all'] = $trlEntryCollection['missing']['all'];
+        unset($trlEntryCollection['default']);
+        unset($trlEntryCollection['missing']);
+        unset($trlEntryCollection['locales']);
+        unset($trlEntryCollection['locales']);
+
+        return $trlEntryCollection;
+    }
+
+    private function countMissing(array$missing)
+    {
+        $count = 0;
+        foreach ($missing as $miss) {
+            $count += $miss['all'];
+        }
+
+        return $count;
+    }
+
+
+    public function getAllMissingEntriesPrepared()
+    {
+        $missing = $this->prepareMissingDataGlobal();
         $default = $this->getDefaultLanguage();
+        $locales = $this->getUsedLocales();
+
+        $returnAr['entriesCount'] = $this->countMissing($missing);
+        $returnAr['locales'] = $locales;
+        $returnAr['default'] = $default;
+        $returnAr['entries'] = $missing;
+
+        #td($returnAr);
+        return $returnAr;
+    }
+
+    public function getEntriesByBundleAndLibPrepared($bundle, $lib)
+    {
+        $data = $this->getEntriesByBundleAndLib($bundle, $lib);
+        $trlEntryCollection = $this->prepareData($data);
+        $missing = $this->getMissingOverview($trlEntryCollection);
+
+        $default = $this->getDefaultLanguage();
+        $locales = $this->getUsedLocales();
+
+        $returnAr['default'] = $default;
+        $returnAr['missing'] = $missing;
+        $returnAr['lib'] = $lib;
+        $returnAr['bundle'] = $bundle;
+        $returnAr['locales'] = $locales;
+        $returnAr['entries'] = $trlEntryCollection;
+
+        return $returnAr;
+    }
+
+
+    public function getMissingOverview(&$trlEntry)
+    {
+        $default = $this->getDefaultLanguage();
+        $locales = $this->getUsedLocales();
+        $missing = array();
         $missingCount = 0;
-        foreach ($locales as $locale) {
-            foreach ($keyAr as $key => $entry) {
-                #   td($entries);
+        foreach ($trlEntry as $key => $entry) {
+
+            foreach ($locales as $locale) {
                 if (!isset($entry[$locale]) || !$entry[$locale]) {
-                    $keyAr[$key][$locale] = null;
-                    if ($locale != $default) {
+                    $trlEntry[$key][$locale] = null;
+                    if ($locale != $default || !$this->isAlphabetic($key)) {
+
                         $missingCount++;
                         $missing['entries'][$key] = $key;
 
@@ -212,37 +399,18 @@ class MongoStorageManager extends ContainerAware
             }
         }
         $missing['all'] = $missingCount;
-        $returnAr['default'] = $default;
-        $returnAr['missing'] = $missing;
-        $returnAr['lib'] = $lib;
-        $returnAr['bundle'] = $bundle;
-        $returnAr['locales'] = $locales;
-        $returnAr['entries'] = $keyAr;
-
-        return $returnAr;
+        #td($missing);
+        return $missing;
     }
 
-    public function getEntriesByBundleAndLocalAndLib($bundle, $locale, $lib)
+    public
+    function getEntriesByBundleAndLocalAndLib($bundle, $locale, $lib)
     {
         $query = array("bundle" => $bundle, "locale" => $locale, "lib" => $lib);
         $this->setQuery($query);
-        $result = $this->getCollection()->findOne($this->getQuery());
+        $result = (array)$this->getCollection()->findOne($this->getQuery());
 
         return $result;
     }
-
-    public function extractBundle($filename)
-    {
-        preg_match("/[^\/]*Bundle/", $filename, $bundle);
-        return $bundle[0];
-    }
-
-    public function extractLib($filename)
-    {
-        preg_match("/[^\/]+$/", $filename, $file);
-        list($lib, $a, $b) = explode('.', $file[0]);
-        return $lib;
-    }
-
 
 }

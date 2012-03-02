@@ -150,7 +150,6 @@
 <table class="zebra-striped">
     <thead>
     <tr>
-        <th>{{trlKeys.bundle}}::{{trlKeys.lib}}</th>
         <th>Key</th>
         {% set default = trlKeys.default %}
         {% for locale in trlKeys.locales %}
@@ -158,15 +157,12 @@
             {% if locale == default %}<span class="label">Default</span>{%endif%}
         </th>
         {% endfor %}
+        <th>{{trlKeys.bundle}}::{{trlKeys.lib}}</th>
     </tr>
     </thead>
     <tbody>
     {% for  key, translates in trlKeys.entries %}
     <tr id="entry-{{loop.index}}" {{trlKeys.missing.entries[key] is defined ? 'class="missing"' : 'class="ok"'}}>
-        <td>
-            <input id="remove-{{loop.index}}" class=" btn danger mysmall" type="button" value="Remove"
-                   onclick="confirm('Are you sure?') && removeEntry('{{loop.index}}', '{{key}}', '{{trlKeys.bundle}}', '{{trlKeys.lib}}')">
-        </td>
         <td>{{key}}</td>
         {% for locale in trlKeys.locales %}
         <td>
@@ -178,11 +174,11 @@
                 {% if locale != default and exists and translation == translates[default] %}
                 <span class="label warning">Duplicate</span>
                 {% endif %}
-                {% if ( not exists or translation|length == 0 ) and locale != default%}
+                {% if ( not exists or translation|length == 0 ) and trlKeys.missing.entries[key] is defined %}
                 <span class="label important"
                       onclick="showEditor('{{loop.parent.loop.index}}-{{locale}}')">Missing</span>
                 {% endif %}
-                {% if ( not exists or translation|length == 0 ) and locale == default%}
+                {% if ( not exists or translation|length == 0 ) and locale == default and not trlKeys.missing.entries[key] is defined  %}
                 <span style="background: #0069d6;" class="label less important"
                       onclick="showEditor('{{loop.parent.loop.index}}-{{locale}}')">equals Key</span>
                 {% endif %}
@@ -198,6 +194,10 @@
             </div>
         </td>
         {% endfor %}
+        <td>
+            <input id="remove-{{loop.index}}" class=" btn danger mysmall" type="button" value="Remove"
+                   onclick="confirm('Are you sure?') && removeEntry('{{loop.index}}', '{{key}}', '{{trlKeys.bundle}}', '{{trlKeys.lib}}')">
+        </td>
     </tr>
     {% endfor %}
     </tbody>

@@ -7,30 +7,29 @@ use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 
 class EditorController extends Controller
 {
+
+    ############################################################################
+    ########################      class     ####################################
+    ############################################################################
+
     private function getContainer()
     {
         return $this->container;
     }
-
 
     private function getManager()
     {
         return $this->getContainer()->get('server_grove_translation_editor.storage_manager');
     }
 
-
     public function getCollection()
     {
         return $this->getManager()->getCollection();
     }
 
-    private function getData()
-    {
-        $data = $this->getCollection()->find();
-        $data->sort(array('locale' => 1));
-
-        return $data;
-    }
+    ############################################################################
+    ########################      ACTION    ####################################
+    ############################################################################
 
     public function listAction()
     {
@@ -40,6 +39,11 @@ class EditorController extends Controller
         $request = $this->getRequest();
         $bundle = ucfirst($request->get("bundle"));
         $lib = strtolower($request->get("lib"));
+
+        if (!$lib || !$bundle) {
+            return $this->redirect($this->generateUrl("sg_localeditor_list_global"));
+        }
+
         $bundle = $bundle ? $bundle : "CoreBundle";
         $lib = $lib ? $lib : "messages";
         $trlKeys = $m->getEntriesByBundleAndLibPrepared($bundle, $lib);
@@ -53,23 +57,40 @@ class EditorController extends Controller
         );
     }
 
+    public function listGlobalAction()
+    {
+        /** @var $m \ServerGrove\Bundle\TranslationEditorBundle\MongoStorageManager */
+        $m = $this->getManager();
+        $trlKeys = $m->getAllMissingEntriesPrepared();
+        //sidebar menu
+        $sidebar = $this->sideBar();
+
+        return $this->render('ServerGroveTranslationEditorBundle:Editor:list_global.html.twig', array(
+                'trlKeys' => $trlKeys,
+                "sidebar" => $sidebar,
+            )
+        );
+    }
+
     private function sideBar()
     {
+        /** @var $m \ServerGrove\Bundle\TranslationEditorBundle\MongoStorageManager */
         $m = $this->getManager();
         $bundles = $m->getBundlesWithTranslations();
+
         $sidebar = array();
         foreach ($bundles as $key => $bundle) {
-            $sidebar[$bundle] = $m->getFilesByBundle($bundle);
+            $sidebar['data'][$bundle] = $m->getFileOverviewByBundle($bundle);
         }
+
+        $sidebar['link']['listGlobal'] = $this->generateUrl("sg_localeditor_list_global");
 
         return $sidebar;
     }
 
     public function removeAction()
     {
-
         $request = $this->getRequest();
-
         if ($request->isXmlHttpRequest()) {
             $key = $request->request->get('key');
             $bundle = $request->request->get('bundle');
@@ -77,17 +98,15 @@ class EditorController extends Controller
             /** @var $m \ServerGrove\Bundle\TranslationEditorBundle\MongoStorageManager */
             $m = $this->getManager();
             $values = $m->getEntriesByBundleAndLib($bundle, $lib);
-
             foreach ($values as $data) {
                 if (isset($data['entries'][$key])) {
                     unset($data['entries'][$key]);
-                    $this->updateData($data);
+                    $m->updateData($data);
                 }
             }
 
-            $res = array(
-                'result' => true,
-            );
+            $res = array('result' => true);
+
             return new \Symfony\Component\HttpFoundation\Response(json_encode($res));
         }
     }
@@ -95,7 +114,6 @@ class EditorController extends Controller
     public function addAction()
     {
         $request = $this->getRequest();
-
         $locales = $request->request->get('locale');
         $newKey = $request->request->get('key');
         $bundle = $request->request->get('bundle');
@@ -103,13 +121,13 @@ class EditorController extends Controller
         /** @var $m \ServerGrove\Bundle\TranslationEditorBundle\MongoStorageManager */
         $m = $this->getManager();
         $entries = $m->getEntriesByBundleAndLibPrepared($bundle, $lib);
-
         foreach ($entries['entries'] as $key => $values) {
             if ($newKey == $key) {
                 $res = array(
                     'result' => false,
                     'msg' => 'The key already exists. Please update it instead.',
                 );
+
                 return new \Symfony\Component\HttpFoundation\Response(json_encode($res));
             }
         }
@@ -119,7 +137,7 @@ class EditorController extends Controller
                 $data = $m->getentriesByBundleAndLocalAndLib($bundle, $locale, $lib);
                 $data['entries'][$newKey] = $value;
 
-                $this->updateData($data);
+                $m->updateData($data);
             }
         }
 
@@ -149,39 +167,29 @@ class EditorController extends Controller
             //hole datei
             $m = $this->getManager();
             $values = $m->getEntriesByBundleAndLocalAndLib($bundle, $locale, $lib);
-            //key validation
-            $found = false;
-            foreach ($values['entries'] as $data) {
-                if (isset($data[$key])) {
-                    $found = true;
-                    break;
-                }
-            }
-            //wrong key
-            if (!$found) {
-                $res = array(
-                    'result' => false,
-                    'msg' => 'The key does not exists. Please add it instead.',
-                );
-                return new \Symfony\Component\HttpFoundation\Response(json_encode($res));
+            //das document gibts noch gornie (z.b lib.de.yml ex. aber lib.en.yml nicht)
+            if ( !$values ) {
+                $values['bundle'] = $bundle;
+                $values['lib'] = $lib;
+                $values['locale'] = $locale;
+                $values['type'] = "yml";
+                $values['entries'][$key] = $val;
+                $m->insertData($values);
+            } else  {
+                $values['entries'][$key] = $val;
+                $m->updateData($values);
             }
             //überschreibe nmit new
-            $values['entries'] [$key] = $val;
-            $this->updateData($values);
+
+
 
             $res = array(
                 'result' => true,
-                'oldata' => $data[$key],
 
             );
+
             return new \Symfony\Component\HttpFoundation\Response(json_encode($res));
         }
     }
 
-    protected function updateData($data)
-    {
-        $this->getCollection()->update(
-            array('_id' => $data['_id'])
-            , $data, array('upsert' => true));
-    }
 }
