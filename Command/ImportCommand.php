@@ -13,23 +13,16 @@ use Symfony\Component\Translation\Loader\YamlFileLoader;
  * Command for importing translation files
  */
 
-class ImportCommand extends Base
-{
+class ImportCommand extends Base {
 
-    protected function configure()
-    {
+    protected function configure() {
         parent::configure();
 
-        $this
-            ->setName('locale:editor:import')
-            ->setDescription('Import translation files into MongoDB for using through /translations/editor')
-            ->addArgument('filename')
-            ->addOption("dry-run");
+        $this->setName('locale:editor:import')->setDescription('Import translation files into MongoDB for using through /translations/editor')->addArgument('filename')->addOption("dry-run");
 
     }
 
-    public function execute(InputInterface $input, OutputInterface $output)
-    {
+    public function execute(InputInterface $input, OutputInterface $output) {
         $this->input = $input;
         $this->output = $output;
 
@@ -37,12 +30,12 @@ class ImportCommand extends Base
 
         $files = array();
 
-        if (!empty($filename) && is_dir($filename)) {
+        if( !empty($filename) && is_dir($filename) ) {
             $output->writeln("Importing translations from <info>$filename</info>...");
             $finder = new Finder();
             $finder->files()->in($filename)->name('*');
 
-            foreach ($finder as $file) {
+            foreach( $finder as $file ) {
                 $output->writeln("Found <info>" . $file->getRealpath() . "</info>...");
                 $files[] = $file->getRealpath();
             }
@@ -54,30 +47,29 @@ class ImportCommand extends Base
             $finder = new Finder();
             $finder->directories()->in($dir)->name('translations');
 
-            foreach ($finder as $dir) {
+            foreach( $finder as $dir ) {
                 $finder2 = new Finder();
                 $finder2->files()->in($dir->getRealpath())->name('*');
-                foreach ($finder2 as $file) {
+                foreach( $finder2 as $file ) {
                     $output->writeln("Found <info>" . $file->getRealpath() . "</info>...");
                     $files[] = $file->getRealpath();
                 }
             }
         }
 
-        if (!count($files)) {
+        if( !count($files) ) {
             $output->writeln("<error>No files found.</error>");
             return;
         }
         $output->writeln(sprintf("Found %d files, importing...", count($files)));
 
-        foreach ($files as $filename) {
+        foreach( $files as $filename ) {
             $this->import($filename);
         }
 
     }
 
-    public function import($filename)
-    {
+    public function import($filename) {
         $fname = basename($filename);
 
         $this->output->writeln("Processing <info>" . $filename . "</info>...");
@@ -86,7 +78,7 @@ class ImportCommand extends Base
 
         $this->setIndexes();
 
-        switch ($type) {
+        switch( $type ) {
             case 'yml':
                 $m = $this->getContainer()->get('server_grove_translation_editor.storage_manager');
                 $lib = $m->extractLib($filename);
@@ -94,21 +86,21 @@ class ImportCommand extends Base
 
                 $data = $m->getCollection()->findOne(array('filename' => $filename));
 
-                if (!$data) {
-                    $data = array(
-                        'filename' => $filename,
-                        "bundle" => $m->extractBundle($filename),
-                        "dateImport" => new \DateTime(),
-                        "lib" => $lib,
-                        'locale' => $locale,
-                        'type' => $type,
-                        'entries' => $entries,
-                    );
+                if( !$data ) {
+                    $data = array('filename' => $filename,
+                                  "bundle" => $m->extractBundle($filename),
+                                  "dateImport" => new \DateTime(),
+                                  "lib" => $lib,
+                                  'locale' => $locale,
+                                  'type' => $type,
+                                  'entries' => $entries,);
 
+                } elseif( $data && $this->fileChangedAfterImport($data) ) {
+                    throw new \Exception("File '" . $data['filename'] . "' has been changed after last import. Resolve conflict on tool!");
+                    return;
                 }
-
                 $this->output->writeln("  Found " . count($entries) . " entries...");
-                if (!$this->input->getOption('dry-run')) {
+                if( !$this->input->getOption('dry-run') ) {
                     $this->updateValue($data);
                 }
                 break;
@@ -118,30 +110,24 @@ class ImportCommand extends Base
         }
     }
 
-    private function concludeEntries($filename, $locale, $lib)
-    {
+    private function concludeEntries($filename, $locale, $lib) {
         $yamlFileLoader = new YamlFileLoader();
         $entries = $yamlFileLoader->load($filename, $locale, $lib)->all($lib);
         return $entries;
     }
 
-    protected function setIndexes()
-    {
+    protected function setIndexes() {
         $collection = $this->getContainer()->get('server_grove_translation_editor.storage_manager')->getCollection();
-        $collection->ensureIndex(array("filename" => 1, 'locale' => 1));
+        $collection->ensureIndex(array("filename" => 1,
+                                      'locale' => 1));
     }
 
-    protected function updateValue($data)
-    {
+    protected function updateValue($data) {
         $collection = $collection = $this->getContainer()->get('server_grove_translation_editor.storage_manager')->getCollection();
 
-        $criteria = array(
-            'filename' => $data['filename'],
-        );
+        $criteria = array('filename' => $data['filename'],);
 
-        $mdata = array(
-            '$set' => $data,
-        );
+        $mdata = array('$set' => $data,);
 
         return $collection->update($criteria, $data, array('upsert' => true));
     }

@@ -119,26 +119,5 @@ class ExportCommand extends Base
         }
     }
 
-    private function fileChangedAfterImport($data)
-    {
-        $dateImport = $data['dateImport'];
-
-        $fileTime = filemtime($data['filename']);
-        $timezone = new \DateTimeZone($dateImport['timezone']);
-        //set DT OBJS, use this way since constructor is buggy
-        $dtImport = new \DateTime();
-        $dtFile = new \DateTime();
-        $dtImport->setTimezone($timezone);
-        $dtFile->setTimezone($timezone);
-        $dtImport->setTimestamp(strtotime($dateImport['date']));
-        $dtFile->setTimestamp($fileTime);
-        //File has been changed after import
-        if ($dtFile > $dtImport) {
-            return true;
-        }
-
-        return false;
-    }
-
 
 }
