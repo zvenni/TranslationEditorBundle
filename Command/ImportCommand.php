@@ -17,9 +17,7 @@ class ImportCommand extends Base {
 
     protected function configure() {
         parent::configure();
-
         $this->setName('locale:editor:import')->setDescription('Import translation files into MongoDB for using through /translations/editor')->addArgument('filename')->addOption("dry-run");
-
     }
 
     public function execute(InputInterface $input, OutputInterface $output) {
@@ -96,7 +94,7 @@ class ImportCommand extends Base {
                                   'entries' => $entries,);
 
                 } elseif( $data && $this->fileChangedAfterImport($data) ) {
-                    throw new \Exception("File '" . $data['filename'] . "' has been changed after last import. Resolve conflict on tool!");
+                    throw new \Exception("File '" . $data['filename'] . "' has directly been changed after last import. Resolve on reverting files and editing in TranslationEditor");
                     return;
                 }
                 $this->output->writeln("  Found " . count($entries) . " entries...");

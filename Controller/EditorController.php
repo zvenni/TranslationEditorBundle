@@ -113,11 +113,14 @@ class EditorController extends Controller {
             if( !$request->request->get('check-only') ) {
                 $data = $m->getentriesByBundleAndLocalAndLib($bundle, $locale, $lib);
                 if( !$data ) {
+                    $data['filename'] = $m->libFileName($bundle, $locale, $lib);
                     $data['bundle'] = $bundle;
                     $data['lib'] = $lib;
+                    $data['dateImport'] = new \DateTime();
                     $data['locale'] = $locale;
+                    $data['entries'][$newKey] = $value;
                     $data['type'] = "yml";
-                    $m->insertData($values);
+                    $m->insertData($data);
                 } else {
                     $data['entries'][$newKey] = $value;
                     $m->updateData($data);
@@ -154,6 +157,8 @@ class EditorController extends Controller {
             //das document gibts noch gornie (z.b lib.de.yml ex. aber lib.en.yml nicht)
             if( !$values ) {
                 $values['bundle'] = $bundle;
+                $values['filename'] = $m->libFileName($bundle, $locale, $lib);
+                $values['dateImport'] = new \DateTime();
                 $values['lib'] = $lib;
                 $values['locale'] = $locale;
                 $values['type'] = "yml";

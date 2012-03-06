@@ -12,8 +12,7 @@ use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
 /**
  */
 
-class Base extends ContainerAwareCommand
-{
+class Base extends ContainerAwareCommand {
     /**
      * @var InputInterface
      */
@@ -24,11 +23,9 @@ class Base extends ContainerAwareCommand
      */
     protected $output;
 
-    protected function fileChangedAfterImport(array $data)
-    {
+    protected function fileChangedAfterImport(array $data) {
         $dateImport = $data['dateImport'];
-
-        $fileTime = filemtime($data['filename']);
+        $fileTime = file_exists($data['filename']) ? filemtime($data['filename']) : 0;
         $timezone = new \DateTimeZone($dateImport['timezone']);
         //set DT OBJS, use this way since constructor is buggy
         $dtImport = new \DateTime();
@@ -38,7 +35,8 @@ class Base extends ContainerAwareCommand
         $dtImport->setTimestamp(strtotime($dateImport['date']));
         $dtFile->setTimestamp($fileTime);
         //File has been changed after import
-        if ($dtFile > $dtImport) {
+        # td($dtFile);
+        if( $dtFile > $dtImport ) {
             return true;
         }
 
