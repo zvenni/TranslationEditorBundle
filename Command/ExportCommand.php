@@ -84,10 +84,19 @@ class ExportCommand extends Base {
                 $result = $dumper->dump($data['entries'], 1);
                 //create or update file entries
                 $this->output->writeln("  Writing " . count($data['entries']) . " entries to $filename");
+
                 if( !$this->input->getOption('dry-run') ) {
-                    file_put_contents($filename, $result);
+                    //encoding für lang
+                    switch( $locale ) {
+                        default:
+                            if( $data['bundle'] == "WebBundle" && $data['locale'] == "en" && $data['lib'] == "menu" ) {
+
+                            }
+                            file_put_contents($filename, $result);
+                            break;
+                    }
                 }
-                //update Date for synchonization
+                //update Date neu setzen for synchonization
                 $data['dateImport'] = new \DateTime();
                 $m->updateData($data);
                 break;

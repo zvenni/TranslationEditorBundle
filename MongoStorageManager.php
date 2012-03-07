@@ -108,6 +108,8 @@ class MongoStorageManager extends ContainerAware {
         return $this->getContainer()->getParameter('kernel.root_dir') . '/../src';
     }
 
+
+
     private function getTranslationFinder($path = "") {
         $finder = $this->getFinder();
         if( !$path ) {
@@ -202,7 +204,6 @@ class MongoStorageManager extends ContainerAware {
             $locales = array();
             foreach( $finder2 as $file ) {
                 $locale = $this->extractLocaleFromFilename($file->getFilename());
-
                 if( !in_array($locale, $locales) ) {
                     $locales[] = $locale;
                 }
@@ -211,6 +212,8 @@ class MongoStorageManager extends ContainerAware {
 
         return $locales;
     }
+
+
 
     public function getFileOverviewByBundle($bundle) {
         $bundleFiles = $this->getFilesByBundle($bundle);
@@ -397,7 +400,7 @@ class MongoStorageManager extends ContainerAware {
             }
         }
         $missing['all'] = $missingCount;
-        #td($missing);
+
         return $missing;
     }
 
