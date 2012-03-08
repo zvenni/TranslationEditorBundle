@@ -1,7 +1,6 @@
 {
     "name": "zvenni/translation-editor-bundle", 
     "type": "library",
-    "license": "MIT",
     "authors": [
         {
             "name":" Pablo Godel",
@@ -20,6 +19,5 @@
         "psr-0": {
             "ServerGrove\\Bundle\\TranslationEditorBundle": ""
         }
-    },
-    "target-dir": "ServerGrove/Bundle/TranslationEditorBundle"
+    }
 }
