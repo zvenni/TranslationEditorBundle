@@ -1,5 +1,5 @@
 {
-    "name": "zvenni/servergrove/translation-editor-bundle",
+    "name": "zvenni/translation-editor-bundle",
     "description": "Web based UI to manage Symfony2 translations",
     "keywords": ["symfony2", "translations", "locale", "editor"],
     "homepage": "http://github.com/servergrove/TranslationEditorBundle",
@@ -17,6 +17,9 @@
             "email": "sven@dampfer.net"
         }
     ],
+    "require": {
+        "php": ">=5.3.2"
+    },
     "autoload": {
         "psr-0": {
             "ServerGrove\\Bundle\\TranslationEditorBundle": ""
