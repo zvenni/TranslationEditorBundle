@@ -1,11 +1,7 @@
 {
-    "name": "zvenni/translation-editor-bundle",
-    "description": "Web based UI to manage Symfony2 translations",
-    "keywords": ["symfony2", "translations", "locale", "editor"],
-    "homepage": "http://github.com/servergrove/TranslationEditorBundle",
-    "type": "symfony-bundle",
+    "name": "zvenni/translation-editor-bundle", 
+    "type": "library",
     "license": "MIT",
-    "version": "1.0.4",
     "authors": [
         {
             "name":" Pablo Godel",
