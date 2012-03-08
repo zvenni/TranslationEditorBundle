@@ -19,5 +19,6 @@
         "psr-0": {
             "ServerGrove\\Bundle\\TranslationEditorBundle": ""
         }
-    }
+    },
+    "target-dir": "ServerGrove/Bundle/TranslationEditorBundle"
 }
