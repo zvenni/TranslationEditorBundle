@@ -17,10 +17,6 @@
             "email": "sven@dampfer.net"
         }
     ],
-    "require": {
-        "php": ">=5.3.2",
-        "symfony/framework-bundle": "2.*"
-    },
     "autoload": {
         "psr-0": {
             "ServerGrove\\Bundle\\TranslationEditorBundle": ""
