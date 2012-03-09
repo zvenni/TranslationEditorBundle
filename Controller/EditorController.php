@@ -3,7 +3,7 @@
 namespace ServerGrove\Bundle\TranslationEditorBundle\Controller;
 
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
-
+use Symfony\Component\Translation\Loader\YamlFileLoader;
 
 class EditorController extends Controller {
 
@@ -23,11 +23,14 @@ class EditorController extends Controller {
         return $this->getManager()->getCollection();
     }
 
+
+
     ############################################################################
     ########################      ACTION    ####################################
     ############################################################################
 
     public function listAction() {
+
         /** @var $m \ServerGrove\Bundle\TranslationEditorBundle\MongoStorageManager */
         $m = $this->getManager();
         //Request Handling

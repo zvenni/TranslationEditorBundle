@@ -26,6 +26,7 @@ class ExportCommand extends Base {
         $m = $this->getContainer()->get('server_grove_translation_editor.storage_manager');
         //fetch results
         $results = $m->getAll();
+
         //nothing to do
         if( !$results ) {
             $output->writeln("<error>No files found.</error>");
@@ -33,13 +34,10 @@ class ExportCommand extends Base {
         }
         //check file changes
         $output->writeln(sprintf("Check files on changes since last import before starting export..."));
+
         foreach( $results as $data ) {
-            if( $this->fileChangedAfterImport($data) ) {
-                throw new \Exception("File '" . $data['filename'] . "' has directly been changed after last import. Resolve on reverting files and editing in TranslationEditor");
-                return;
-            }
+              $this->syncFileForTransfer($data['filename']);
         }
-        unset($data);
         //start
         $output->writeln(sprintf("Found %d files, exporting...", count($results)));
         foreach( $results as $data ) {

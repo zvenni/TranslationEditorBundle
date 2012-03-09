@@ -7,76 +7,51 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Finder\Finder;
-use Symfony\Component\Translation\Loader\YamlFileLoader;
+
 
 /**
  * Command for importing translation files
  */
-class ImportCommand extends Base {
+
+class ImportCSVCommand extends Base {
 
     protected function configure() {
         parent::configure();
-        $this->setName('locale:editor:import')->setDescription('Import translation files into MongoDB for using through /translations/editor')->addArgument('filename')->addOption("dry-run");
+        $this->setName('locale:editor:importcsv')->setDescription('Import translation CSV into MongoDB for using through /translations/editor')->addArgument('filename')->addOption("dry-run");
     }
 
     public function execute(InputInterface $input, OutputInterface $output) {
+
+        throw new \Exception("SCRIPT NOT READY");
+
         $this->input = $input;
         $this->output = $output;
-        $filename = $input->getArgument('filename');
-        $files = array();
-        //certain fil
         if( !empty($filename) && is_dir($filename) ) {
-            $output->writeln("Importing translations from <info>$filename</info>...");
-            $finder = new Finder();
-            $finder->files()->in($filename)->name('*');
+            $filename = $this->getFilename($filename);
 
-            foreach( $finder as $file ) {
-                $output->writeln("Found <info>" . $file->getRealpath() . "</info>...");
-                $files[] = $file->getRealpath();
-            }
         } else {
-            //fetch all trl files
-            $dir = $this->getContainer()->getParameter('kernel.root_dir') . '/../src';
-            $output->writeln("Scanning " . $dir . "...");
-            $finder = new Finder();
-            $finder->directories()->in($dir)->name('translations');
-
-            foreach( $finder as $dir ) {
-                $finder2 = new Finder();
-                $finder2->files()->in($dir->getRealpath())->name('*');
-                foreach( $finder2 as $file ) {
-                    $output->writeln("Found <info>" . $file->getRealpath() . "</info>...");
-                    $files[] = $file->getRealpath();
-                }
-            }
+            $filename = $this->getFilename();
         }
-        //there is nothing to do
-        if( !count($files) ) {
-            $output->writeln("<error>No files found.</error>");
-            return;
-        }
-        //DB and Trl files synchron?
-        foreach( $files as $filename ) {
-            $this->syncFileForTransfer($filename);
-        }
-        //ething ok - let's import some files
-        $output->writeln(sprintf("Found %d files, importing...", count($files)));
-        foreach( $files as $filename ) {
-            $this->import($filename);
-        }
+        //check file changes not necessary, overwrite existing keys in db, rest stays untouched
+        $output->writeln("Scanning <info>$filename</info>...");
+        $this->import($filename);
     }
-
 
     public function import($filename) {
         $fname = basename($filename);
+
         $this->output->writeln("Processing <info>" . $filename . "</info>...");
+
         list($name, $locale, $type) = explode('.', $fname);
+
         $this->setIndexes();
+
         switch( $type ) {
             case 'yml':
                 $m = $this->getContainer()->get('server_grove_translation_editor.storage_manager');
                 $lib = $m->extractLib($filename);
                 $entries = $this->concludeEntries($filename, $locale, $lib);
+
                 $data = $m->getCollection()->findOne(array('filename' => $filename));
 
                 if( !$data ) {
@@ -88,6 +63,9 @@ class ImportCommand extends Base {
                                   'type' => $type,
                                   'entries' => $entries,);
 
+                } elseif( $data && $this->fileChangedAfterImport($data) ) {
+                    throw new \Exception("File '" . $data['filename'] . "' has directly been changed after last import. Resolve on reverting files and editing in TranslationEditor");
+                    return;
                 }
                 $this->output->writeln("  Found " . count($entries) . " entries...");
                 if( !$this->input->getOption('dry-run') ) {
@@ -101,6 +79,7 @@ class ImportCommand extends Base {
     }
 
 
+
     protected function setIndexes() {
         $collection = $this->getContainer()->get('server_grove_translation_editor.storage_manager')->getCollection();
         $collection->ensureIndex(array("filename" => 1,
@@ -109,8 +88,14 @@ class ImportCommand extends Base {
 
     protected function updateValue($data) {
         $collection = $collection = $this->getContainer()->get('server_grove_translation_editor.storage_manager')->getCollection();
+
         $criteria = array('filename' => $data['filename'],);
+
+        $mdata = array('$set' => $data,);
+
         return $collection->update($criteria, $data, array('upsert' => true));
     }
 
 }
+
+

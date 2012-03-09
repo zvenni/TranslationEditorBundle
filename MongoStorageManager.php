@@ -172,7 +172,12 @@ class MongoStorageManager extends ContainerAware {
     private function extractLocaleFromFilename($filename) {
         $fileExplode = explode(".", $filename);
         end($fileExplode);
+
         return prev($fileExplode);
+    }
+
+    public function entryChangedOnFileOrDB($bundle, $lib, $entry) {
+
     }
 
     ############################################################################
@@ -291,7 +296,7 @@ class MongoStorageManager extends ContainerAware {
         return $results;
     }
 
-    private function prepareData($data) {
+    public function prepareData($data) {
         $trlEntryCollection = array();
         foreach( $data as $d ) {
             $entries = $d['entries'];

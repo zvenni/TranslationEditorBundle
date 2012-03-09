@@ -42,10 +42,7 @@ class ExportCSVCommand extends Base {
         //check file changes
         $output->writeln(sprintf("Check files on changes since last import before starting CSV export..."));
         foreach( $results as $data ) {
-            if( $this->fileChangedAfterImport($data) ) {
-                throw new \Exception("File '" . $data['filename'] . "' has directly been changed after last import. Resolve on reverting files and editing in TranslationEditor");
-                return;
-            }
+           $this->syncFileForTransfer($data['filename']);
         }
         unset($data);
         //start
@@ -66,9 +63,9 @@ class ExportCSVCommand extends Base {
             return;
         }
         //file creating
-        $path = $this->getContainer()->getParameter('kernel.root_dir') . '/logs/csv';
-        $filename = "lovoo_translation." . date("d.m.y") . ".csv";
-        $file = fopen($path . "/" . $filename, "w+");
+
+        $filename = $this->getCSVFile();
+        $file = fopen($filename, "w+");
         //csv table header
         $head[] = "key";
         $locales = $m->getUsedLocales();
