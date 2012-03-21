@@ -2,34 +2,27 @@
 
 namespace ServerGrove\Bundle\TranslationEditorBundle\Controller;
 
+use ServerGrove\Bundle\TranslationEditorBundle\Controller\ServerGroveController;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 
 
-class EditorController extends Controller {
+class WebsEditorController extends ServerGroveController {
 
     ############################################################################
     ########################      class     ####################################
     ############################################################################
 
-    private function getContainer() {
-        return $this->container;
-    }
-
-    private function getManager() {
-        return $this->getContainer()->get('server_grove_translation_editor.storage_manager');
-    }
-
-    public function getCollection() {
-        return $this->getManager()->getCollection();
-    }
+    private $platform = "webs";
 
     ############################################################################
     ########################      ACTION    ####################################
     ############################################################################
 
     public function listAction() {
-        /** @var $m \ServerGrove\Bundle\TranslationEditorBundle\MongoStorageManager */
-        $m = $this->getManager();
+
+
+        /** @var $m \ServerGrove\Bundle\TranslationEditorBundle\Manager\WebsManager */
+        $m = $this->getManager($this->platform);
         //Request Handling
         $request = $this->getRequest();
         $bundle = ucfirst($request->get("bundle"));
@@ -41,31 +34,33 @@ class EditorController extends Controller {
         //sidebar menu
         $sidebar = $this->sideBar();
 
-        return $this->render('ServerGroveTranslationEditorBundle:Editor:list.html.twig', array('trlKeys' => $trlKeys,
-                                                                                              "sidebar" => $sidebar,));
+        return $this->render('ServerGroveTranslationEditorBundle:Editor:' . $this->platform . '/list.html.twig', array("platform" => $this->platform,
+                                                                                                                      'trlKeys' => $trlKeys,
+                                                                                                                      "sidebar" => $sidebar,));
     }
 
     public function listMissingGlobalAction() {
-        /** @var $m \ServerGrove\Bundle\TranslationEditorBundle\MongoStorageManager */
-        $m = $this->getManager();
+        /** @var $m \ServerGrove\Bundle\TranslationEditorBundle\Manager\WebsManager */
+        $m = $this->getManager($this->platform);
         $trlKeys = $m->getAllMissingEntriesPrepared();
         //sidebar menu
         $sidebar = $this->sideBar();
 
-        return $this->render('ServerGroveTranslationEditorBundle:Editor:list_missing_global.html.twig', array('trlKeys' => $trlKeys,
-                                                                                                             "sidebar" => $sidebar,));
+        return $this->render('ServerGroveTranslationEditorBundle:Editor:' . $this->platform . '/list_missing_global.html.twig', array("platform" => $this->platform,
+                                                                                                                                     'trlKeys' => $trlKeys,
+                                                                                                                                     "sidebar" => $sidebar,));
     }
 
     private function sideBar() {
-        /** @var $m \ServerGrove\Bundle\TranslationEditorBundle\MongoStorageManager */
-        $m = $this->getManager();
+        /** @var $m \ServerGrove\Bundle\TranslationEditorBundle\WebsManager */
+        $m = $this->getManager($this->platform);
         $bundles = $m->getBundlesWithTranslations();
         $sidebar = array();
 
         foreach( $bundles as $key => $bundle ) {
             $sidebar['data'][$bundle] = $m->getFileOverviewByBundle($bundle);
         }
-        $sidebar['link']['listMissingGlobal'] = $this->generateUrl("sg_localeditor_list_missing_global");
+        $sidebar['link']['listMissingGlobal'] = $this->generateUrl($this->platform . "_missing_global");
 
         return $sidebar;
     }
@@ -76,8 +71,8 @@ class EditorController extends Controller {
             $key = $request->request->get('key');
             $bundle = $request->request->get('bundle');
             $lib = $request->request->get('lib');
-            /** @var $m \ServerGrove\Bundle\TranslationEditorBundle\MongoStorageManager */
-            $m = $this->getManager();
+            /** @var $m \ServerGrove\Bundle\TranslationEditorBundle\Manager\WebsManager */
+            $m = $this->getManager($this->platform);
             $values = $m->getEntriesByBundleAndLib($bundle, $lib);
             foreach( $values as $data ) {
                 if( isset($data['entries'][$key]) ) {
@@ -97,8 +92,8 @@ class EditorController extends Controller {
         $newKey = $request->request->get('key');
         $bundle = $request->request->get('bundle');
         $lib = $request->request->get('lib');
-        /** @var $m \ServerGrove\Bundle\TranslationEditorBundle\MongoStorageManager */
-        $m = $this->getManager();
+        /** @var $m \ServerGrove\Bundle\TranslationEditorBundle\Manager\WebsManager */
+        $m = $this->getManager($this->platform);
         $entries = $m->getEntriesByBundleAndLibPrepared($bundle, $lib);
         foreach( $entries['entries'] as $key => $values ) {
             if( $newKey == $key ) {
@@ -131,14 +126,14 @@ class EditorController extends Controller {
 
         if( $request->isXmlHttpRequest() ) {
             $res = array('result' => true,
-                         "redirect" => $this->generateUrl('sg_localeditor_list', array("bundle" => $bundle,
-                                                                                      "lib" => $lib)));
+                         "redirect" => $this->generateUrl($this->platform . '_list', array("bundle" => $bundle,
+                                                                                          "lib" => $lib)));
 
             return new \Symfony\Component\HttpFoundation\Response(json_encode($res));
         }
 
-        return new \Symfony\Component\HttpFoundation\RedirectResponse($this->generateUrl('sg_localeditor_list', array("bundle" => $bundle,
-                                                                                                                     "lib" => $lib)));
+        return new \Symfony\Component\HttpFoundation\RedirectResponse($this->generateUrl($this->platform . '_list', array("bundle" => $bundle,
+                                                                                                                         "lib" => $lib)));
     }
 
     public function updateAction() {
@@ -152,7 +147,7 @@ class EditorController extends Controller {
             $lib = $request->request->get('lib');
             $bundle = $request->request->get('bundle');
             //hole datei
-            $m = $this->getManager();
+            $m = $this->getManager($this->platform);
             $values = $m->getEntriesByBundleAndLocalAndLib($bundle, $locale, $lib);
             //das document gibts noch gornie (z.b lib.de.yml ex. aber lib.en.yml nicht)
             if( !$values ) {
@@ -169,8 +164,6 @@ class EditorController extends Controller {
                 $m->updateData($values);
             }
             //überschreibe nmit new
-
-
             $res = array('result' => true,
 
             );

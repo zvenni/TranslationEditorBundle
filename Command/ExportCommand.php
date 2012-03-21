@@ -14,6 +14,8 @@ use Symfony\Component\Yaml\Dumper;
  */
 class ExportCommand extends Base {
 
+private $platform = "webs";
+
     protected function configure() {
         parent::configure();
         $this->setName('locale:editor:export')->setDescription('Export translations into files')->addArgument('filename')->addOption("dry-run");
@@ -23,10 +25,9 @@ class ExportCommand extends Base {
         //partams
         $this->input = $input;
         $this->output = $output;
-        $m = $this->getContainer()->get('server_grove_translation_editor.storage_manager');
+        $m = $this->getManager($this->platform);
         //fetch results
         $results = $m->getAll();
-
         //nothing to do
         if( !$results ) {
             $output->writeln("<error>No files found.</error>");
@@ -34,10 +35,13 @@ class ExportCommand extends Base {
         }
         //check file changes
         $output->writeln(sprintf("Check files on changes since last import before starting export..."));
-
         foreach( $results as $data ) {
-              $this->syncFileForTransfer($data['filename']);
+            if( $this->fileChangedAfterImport($data) ) {
+                throw new \Exception("File '" . $data['filename'] . "' has directly been changed after last import. Resolve on reverting files and editing in TranslationEditor");
+                return;
+            }
         }
+        unset($data);
         //start
         $output->writeln(sprintf("Found %d files, exporting...", count($results)));
         foreach( $results as $data ) {
@@ -68,7 +72,7 @@ class ExportCommand extends Base {
         $fname = basename($filename);
         $this->output->writeln("Exporting to <info>" . $filename . "</info>...");
         list($name, $locale, $type) = explode('.', $fname);
-        $m = $this->getContainer()->get('server_grove_translation_editor.storage_manager');
+        $m = $this->getManager($this->platform);
         switch( $type ) {
             case 'yml':
                 //destroy empty entries

@@ -1,0 +1,21 @@
+webs_list:
+    pattern:  /translations/webs/editor
+    defaults: { _controller: ServerGroveTranslationEditorBundle:WebsEditor:list }
+    requirements:
+        _method:  GET
+
+webs_missing_global:
+    pattern:  /translations/webs/editor/global/missing
+    defaults: { _controller: ServerGroveTranslationEditorBundle:WebsEditor:listMissingGlobal }
+
+webs_update:
+    pattern:  /translations/webs/update
+    defaults: { _controller: ServerGroveTranslationEditorBundle:WebsEditor:update }
+
+webs_add:
+    pattern:  /translations/webs/add
+    defaults: { _controller: ServerGroveTranslationEditorBundle:WebsEditor:add }
+
+webs_remove:
+    pattern:  /translations/webs/remove
+    defaults: { _controller: ServerGroveTranslationEditorBundle:WebsEditor:remove }

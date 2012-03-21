@@ -5,8 +5,20 @@
     xsi:schemaLocation="http://symfony.com/schema/dic/services http://symfony.com/schema/dic/services/services-1.0.xsd">
 
   <services>
-        <service id="server_grove_translation_editor.storage_manager" class="ServerGrove\Bundle\TranslationEditorBundle\MongoStorageManager">
+        <service id="server_grove_translation_editor.webs_manager" class="ServerGrove\Bundle\TranslationEditorBundle\Manager\WebsManager">
             <argument type="service" id="service_container" />
         </service>
+
+      <service id="server_grove_translation_editor.iphone_manager" class="ServerGrove\Bundle\TranslationEditorBundle\Manager\IphoneManager">
+          <argument type="service" id="service_container" />
+      </service>
+
+      <service id="server_grove_translation_editor.android_manager" class="ServerGrove\Bundle\TranslationEditorBundle\Manager\AndroidManager">
+          <argument type="service" id="service_container" />
+      </service>
+
+      <service id="server_grove_translation_editor.paging" class="ServerGrove\Bundle\TranslationEditorBundle\Paging\Paging">
+          <argument type="service" id="service_container" />
+      </service>
   </services>
 </container>

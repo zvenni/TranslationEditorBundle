@@ -1,0 +1,37 @@
+{% block paging %}
+
+<style type="text/css">
+    .paging{
+        float: left;
+        font-weight: bold;
+        margin-left: 200px;
+        margin-top: 10px;
+    }
+   .paging a {
+       color:white;
+       font-size:16px;
+   }
+</style>
+
+{# {{ path(path.path, setParameter(Paging.getFirstPage(), path.params)) }}#}
+  {#  {{ path(path.path, setParameter(page_pre, path.params)) }}
+    {{ path(path.path, setParameter(page_post, path.params))}}#}
+{% if Paging.getShowPaging() %}
+<div class="paging">
+    {% if Paging.getSkipPre() %}
+    <a class="page_link" href="{{ path(path, {"page" :Paging.getFirstPage()  }) }}">|< ...</a>
+    {% endif %}
+    {% for page_pre in Paging.getNeighboursPre() %}
+    <a class="page_link" href="{{ path(path, {"page" :page_pre }) }}">{{ page_pre }}</a>
+    {% endfor %}
+    <a onclick="return false;" style="color:gold; font-weight:bold;" class="page_link">{{ Paging.getCurrentPage() }}</a>
+    {% for page_post in Paging.getNeighboursPost() %}
+    <a class="page_link" href="{{ path(path, {"page" :page_post }) }}">{{ page_post }}</a>
+    {% endfor %}
+
+    {% if Paging.getSkipPost() %}
+    ... <a class="page_link" href="{{ path(path, {"page" :Paging.getLastPage()  }) }}">>|</a>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,19 @@
+android_list:
+    pattern:  /translations/android/editor
+    defaults: { _controller: ServerGroveTranslationEditorBundle:AndroidEditor:list }
+
+android_missing_global:
+    pattern:  /translations/android/editor/global/missing
+    defaults: { _controller: ServerGroveTranslationEditorBundle:AndroidEditor:listMissingGlobal }
+
+android_update:
+    pattern:  /translations/android/update
+    defaults: { _controller: ServerGroveTranslationEditorBundle:AndroidEditor:update }
+
+android_add:
+    pattern:  /translations/android/add
+    defaults: { _controller: ServerGroveTranslationEditorBundle:AndroidEditor:add }
+
+android_remove:
+    pattern:  /translations/android/remove
+    defaults: { _controller: ServerGroveTranslationEditorBundle:AndroidEditor:remove }

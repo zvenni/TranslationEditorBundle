@@ -1,13 +1,13 @@
 <?php
 
-namespace ServerGrove\Bundle\TranslationEditorBundle;
+namespace ServerGrove\Bundle\TranslationEditorBundle\Manager;
 
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\ContainerAware;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\Yaml\Yaml;
 
-class MongoStorageManager extends ContainerAware {
+class WebsManager extends ContainerAware {
 
     ############################################################################
     ########################      CLASS     ####################################
@@ -24,7 +24,6 @@ class MongoStorageManager extends ContainerAware {
     private function getContainer() {
         return $this->container;
     }
-
 
     private function getDefaultLanguage() {
         //if english is needed
@@ -109,7 +108,6 @@ class MongoStorageManager extends ContainerAware {
     }
 
 
-
     private function getTranslationFinder($path = "") {
         $finder = $this->getFinder();
         if( !$path ) {
@@ -149,8 +147,8 @@ class MongoStorageManager extends ContainerAware {
     ############################################################################
 
     private function isAlphabetic($key) {
-        //all signs but alphabetics/whitespace
-        $forbiddenSigns = "/[^a-zA-z\s]+/";
+        //all signs but alphabetics/whitespace/ _
+        $forbiddenSigns = "/[^a-zA-z\s]|[_]+/";
         if( preg_match($forbiddenSigns, $key) ) {
             return false;
         }
@@ -214,7 +212,6 @@ class MongoStorageManager extends ContainerAware {
     }
 
 
-
     public function getFileOverviewByBundle($bundle) {
         $bundleFiles = $this->getFilesByBundle($bundle);
         $overviewAr = array();
@@ -258,6 +255,8 @@ class MongoStorageManager extends ContainerAware {
     public function getEntriesByBundleAndLibPrepared($bundle, $lib) {
         $data = $this->getEntriesByBundleAndLib($bundle, $lib);
         $trlEntryCollection = $this->prepareData($data);
+
+
         $missing = $this->getMissingOverview($trlEntryCollection);
 
         $default = $this->getDefaultLanguage();
@@ -284,6 +283,7 @@ class MongoStorageManager extends ContainerAware {
     }
 
     public function getEntriesByBundleAndLib($bundle, $lib) {
+        #td($this->getResults(array("bundle"=>"MobileBundle", "lib"=>"messages")));
         $query = array("bundle" => $bundle,
                        "lib" => $lib);
         $results = $this->getResults($query);
@@ -294,6 +294,7 @@ class MongoStorageManager extends ContainerAware {
     private function prepareData($data) {
         $trlEntryCollection = array();
         foreach( $data as $d ) {
+
             $entries = $d['entries'];
             $dloc = $d['locale'];
             if( is_array($entries) ) {
@@ -302,7 +303,6 @@ class MongoStorageManager extends ContainerAware {
                 }
             }
         }
-
         return $trlEntryCollection;
     }
 
@@ -386,19 +386,19 @@ class MongoStorageManager extends ContainerAware {
         $missing = array();
         $missingCount = 0;
         foreach( $trlEntry as $key => $entry ) {
-
             foreach( $locales as $locale ) {
                 if( !isset($entry[$locale]) || !$entry[$locale] ) {
                     $trlEntry[$key][$locale] = null;
-                    if( $locale != $default || !$this->isAlphabetic($key) ) {
-
-                        $missingCount++;
-                        $missing['entries'][$key] = $key;
-
-                    }
+                    $isAlphabetic = $this->isAlphabetic($key);
+                    //if( $locale != $default || !$isAlphabetic ) {
+                    $missingCount++;
+                    #    td($key);
+                    $missing['entries'][$key] = $isAlphabetic;
+                    //}
                 }
             }
         }
+        #td($missing);
         $missing['all'] = $missingCount;
 
         return $missing;

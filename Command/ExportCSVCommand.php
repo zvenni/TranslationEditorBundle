@@ -21,17 +21,18 @@ class ExportCSVCommand extends Base {
     private $content = array();
     private $locales = array();
 
+    private $platform = "webs";
 
     protected function configure() {
         parent::configure();
-        $this->setName('locale:editor:exportcsv')->setDescription('Export translations into files')->addArgument('filename')->addOption("dry-run");
+        $this->setName('locale:editor:exportcsv')->setDescription('Export translations into csv file')->addArgument('filename')->addOption("dry-run");
     }
 
     public function execute(InputInterface $input, OutputInterface $output) {
         //partams
         $this->input = $input;
         $this->output = $output;
-        $m = $this->getContainer()->get('server_grove_translation_editor.storage_manager');
+        $m = $this->getManager($this->platform);
         //fetch results
         $results = $m->getAll();
         //nothing to do
@@ -42,7 +43,10 @@ class ExportCSVCommand extends Base {
         //check file changes
         $output->writeln(sprintf("Check files on changes since last import before starting CSV export..."));
         foreach( $results as $data ) {
-           $this->syncFileForTransfer($data['filename']);
+            if( $this->fileChangedAfterImport($data) ) {
+                throw new \Exception("File '" . $data['filename'] . "' has directly been changed after last import. Resolve on reverting files and editing in TranslationEditor");
+                return;
+            }
         }
         unset($data);
         //start
@@ -55,17 +59,17 @@ class ExportCSVCommand extends Base {
 
 
     public function export() {
-        /** @var $m \ServerGrove\Bundle\TranslationEditorBundle\MongoStorageManager */
-        $m = $this->getContainer()->get('server_grove_translation_editor.storage_manager');
+        /** @var $m \ServerGrove\Bundle\TranslationEditorBundle\WebsManager */
+        $m = $this->getManager($this->platform);
         //nüscht Gewordetes gefunden;
         if( !$bundles = $m->getBundlesWithTranslations() ) {
             throw new \Exception("No translation bundles");
             return;
         }
         //file creating
-
-        $filename = $this->getCSVFile();
-        $file = fopen($filename, "w+");
+        $path = $this->getContainer()->getParameter('kernel.root_dir') . '/logs/csv';
+        $filename = "lovoo_translation." . date("d.m.y") . ".csv";
+        $file = fopen($path . "/" . $filename, "w+");
         //csv table header
         $head[] = "key";
         $locales = $m->getUsedLocales();

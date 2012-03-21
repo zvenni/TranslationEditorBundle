@@ -1,0 +1,288 @@
+{% extends "ServerGroveTranslationEditorBundle::layout.html.twig" %}
+{% use "ServerGroveTranslationEditorBundle::paging.html.twig" %}
+{% block sidebar%}
+
+<script>
+    var Editor = {
+        editors:[],
+        lib:"",
+        platform:"",
+
+        hideEditor:function (id) {
+            //alle offernenen Editors weg
+            $(".editor").addClass("none");
+            //alle zunen Trext rein
+            $(".trlText").removeClass("none");
+            $('#editor-' + id).unbind("keypress");
+        },
+
+        showEditor:function (id) {
+            //console.log(id);
+            //alle offernenen Editors weg
+            Editor.hideEditor(id);
+            //das gewählte: text wege, editor rein
+            $('#current-' + id).addClass("none");
+            $('#editor-' + id).removeClass("none");
+            //focous ins feld und tab überwachung
+            $('#editor-' + id + ' textarea').focus();
+            Editor.tabulate(id);
+        },
+
+        tabulate:function (id) {
+            var eleId = '#editor-' + id
+            $(eleId).bind('keypress', function (event) {
+                if (event.keyCode == 9) {
+                    var nextId = Editor.getNext(id);
+                    var splitId = Editor.splitId(id);
+                    var key = $("#key-" + splitId[0]).html();
+                    var locale = splitId[1];
+                    var onTab = true;
+
+                    Editor.saveChange(id, key, locale, Editor.platform, Editor.lib, onTab);
+                    Editor.showEditor(nextId);
+                }
+            });
+        },
+
+        splitId:function (id) {
+            var split = id.split("-");
+            return split;
+        },
+
+        getNext:function (currentId) {
+            var index = Editor.editors.indexOf(currentId);
+            index++;
+            if (index >= Editor.editors.length) {
+                index = 0;
+            }
+            return Editor.editors[index];
+        },
+
+        editorIds:function () {
+            var currentTable = $("table#translations");
+            var elements = $(".editor", currentTable)
+
+            elements.each(function (index, value) {
+                var id = "#" + $(value).attr("id");
+                var split = id.split("#editor-");
+                Editor.editors.push(split[1]);
+            });
+        },
+
+        showAll:function () {
+            $('.zebra-striped tbody tr.ok').show();
+        },
+
+        showMissing:function () {
+            $('.zebra-striped tbody tr.ok').hide();
+        },
+
+        saveChange:function (id, key, locale, platform, lib, onTab) {
+
+            $('#save-' + id).val('Saving...');
+            var newVal = $('#editor-' + id + ' textarea').val();
+
+            $.ajax({
+                type:"POST",
+                url:'{{path(platform ~ '_update')}}',
+                data:{'key':key, 'locale':locale, 'val':newVal, platform:platform, lib:lib},
+                success:function (data) {
+                    $('#save-' + id).val('Save');
+                    $('#current-' + id + '-content').html(newVal);
+                    if ( !onTab ) {
+                        Editor.hideEditor(id);
+                    }
+                }
+            });
+        },
+
+        removeEntry:function (id, key, platform, lib) {
+            $('#remove-' + id).val('Removing...');
+
+            $.ajax({
+                type:"POST",
+                url:'{{path(platform ~ '_remove')}}',
+                data:{'key':key, platform:platform, lib:lib},
+                success:function (data) {
+                    $('#entry-' + id).remove();
+                }
+            });
+        },
+
+        submitAjaxForm:function (form, checkOnly) {
+            if (typeof(checkOnly) == 'undefined') {
+                checkOnly = false;
+            }
+
+            var url = form.attr('action');
+            //var url = form.action;
+
+            $('#check-only').val(checkOnly ? 1 : 0);
+
+            var data = form.serializeArray();
+            $('.alert-message').hide();
+
+            console.log(data);
+            $.ajax({
+                url:url,
+                dataType:'json',
+                data:data,
+                type:'POST',
+                success:function (data) {
+                    if (data && data.result == true) {
+                        if (!checkOnly) {
+                            /*if ( data.redirect)  {
+                             return location.href = data.redirect;
+                             }*/
+                            $('#key').val('');
+                            $('#key').focus();
+                            $('#newtranslation textarea').val('');
+                            $('#insert-ok').html('New translation inserted successfully');
+                            $('#insert-ok').show();
+                        } else {
+                            //$('#insert-ok').html('Key not found.');
+                            // $('#insert-ok').show();
+                        }
+                    } else {
+                        if (data && data.msg) {
+                            $('#errmsg').html(': ' + data.msg);
+                        } else {
+                            $('#errmsg').html('');
+                        }
+                        $('#insert-error').show();
+                    }
+
+                }
+
+            });
+            return false;
+        }
+
+    };
+</script>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        Editor.editorIds();
+        var info = $("th#info").html().split("::");
+        Editor.lib = info[1];
+        Editor.platform = info[0];
+
+    });
+</script>
+<style>
+    .none {
+        display: none;
+    }
+
+    .editor {
+        /*   display: none;*/
+    }
+
+    .editor textarea {
+        width: 100%;
+        height: 100px;
+    }
+
+    .mysmall {
+        padding: 5px;
+        width: 50px;
+        font-size: 9px;
+    }
+
+</style>
+<h5>Stats</h5>
+<ul>
+    <li><a href="#" onclick="Editor.showAll(); return false;">All Entries: {{Paging.getResultCount()}}</a></li>
+    <li><a href="#" onclick="Editor.showMissing(); return false;">Missing translations
+        (page): {{trlKeys.missing.all}}</a></li>
+</ul>
+{% endblock %}
+
+{% block body %}
+<form id="newtranslation" style="display: none" method="POST"
+      onsubmit="return Editor.submitAjaxForm($('#newtranslation'))" action="{{path(platform ~ '_add')}}">
+    <input type="hidden" id="check-only" name="check-only" value="0"/>
+    <label>Key:</label> <input type="text" id="key" name="key" style="width: 700px"
+                               onchange="Editor.submitAjaxForm($('#newtranslation'), true)"/> </br>
+    {% for locale in trlKeys.locales %}
+    <label>{{locale}}:</label> <textarea name="locale[{{locale}}]" style="width: 700px; height: 100px"></textarea> </br>
+    {% endfor %}
+    <label></label><input type="submit" value="Save" class="btn primary">
+
+
+    <input type="hidden" name="lib" value="{{trlKeys.lib}}">
+
+
+    <input class="btn" type="button" value="Cancel" onclick="$('.alert-message').hide();$('#newtranslation').hide()">
+
+    <p id="insert-ok" class="alert-message success" style="display: none"></p>
+
+    <p id="insert-error" class="alert-message error" style="display: none">An error ocurred while adding the translation<span
+            id="errmsg"></span></p>
+</form>
+<table id="translations" class="zebra-striped">
+    <thead>
+    <tr>
+        <th>Key</th>
+        {% set default = trlKeys.default %}
+        {% for locale in trlKeys.locales %}
+        <th>{{locale}}
+            {% if locale == default %}<span class="label">Default</span>{%endif%}
+        </th>
+        {% endfor %}
+        <th id="info">{{platform}}::{{trlKeys.lib}}</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for  key, translates in trlKeys.entries %}
+    <tr id="entry-{{loop.index}}" {{trlKeys.missing.entries[key] is defined ? 'class="missing"' : 'class="ok"'}}>
+        <td id="key-{{loop.index}}">{{key}}</td>
+        {% for locale in trlKeys.locales %}
+        <td>
+            <div id="current-{{loop.parent.loop.index}}-{{locale}}" class="trlText">
+                {% set translation = translates[locale] %}
+                {% set exists = translation ? true : null %}
+                <div id="current-{{loop.parent.loop.index}}-{{locale}}-content"
+                     onclick="Editor.showEditor('{{loop.parent.loop.index}}-{{locale}}')">{% if exists %}{{translation}}{%endif%}</div>
+                {% if locale != default and exists and translation == translates[default] %}
+                <span class="label warning">Duplicate</span>
+                {% endif %}
+                {% if ( not exists or translation|length == 0 ) and (trlKeys.missing.entries[key] is defined and  ( locale != default or not trlKeys.missing.entries[key] )) %}
+                <span class="label important"
+                      onclick="Editor.showEditor('{{loop.parent.loop.index}}-{{locale}}')">Missing</span>
+                {% endif %}
+                {# nicht da, defualt lang spalte, alphabetischer key#}
+                {% if ( not exists or translation|length == 0 ) and locale == default  and trlKeys.missing.entries[key]is defined and trlKeys.missing.entries[key] %}
+                <span style="background: #0069d6;" class="label less important"
+                      onclick="Editor.showEditor('{{loop.parent.loop.index}}-{{locale}}')">equals Key</span>
+                {% endif %}
+
+            </div>
+            <div id="editor-{{loop.parent.loop.index}}-{{locale}}" class="editor none">
+                <textarea>{% if exists %}{{translation}}{%endif%}</textarea><br/>
+                <input id="save-{{loop.parent.loop.index}}-{{locale}}" class="btn mysmall success" type="button"
+                       value="Save"
+                       onclick="Editor.saveChange('{{loop.parent.loop.index}}-{{locale}}', '{{key|e('js')}}', '{{locale}}', '{{ platform}}', '{{trlKeys.lib}}', false)">
+                <input class="btn mysmall" type="button" value="Cancel"
+                       onclick="Editor.hideEditor('{{loop.parent.loop.index}}-{{locale}}')">
+            </div>
+        </td>
+        {% endfor %}
+        <td>
+            <input id="remove-{{loop.index}}" class=" btn danger mysmall" type="button" value="Remove"
+                   onclick="confirm('Are you sure?') && Editor.removeEntry('{{loop.index}}', '{{key}}', '{{platform}}', '{{trlKeys.lib}}')">
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+<!-- Example row of columns -->
+
+<footer>
+    <p>&copy; ServerGrove feat. LOVOO 2012</p>
+</footer>
+</div>
+
+
+{% endblock %}

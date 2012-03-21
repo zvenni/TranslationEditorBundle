@@ -1,22 +1,9 @@
-sg_localeditor_list:
-    pattern:  /translations/editor
-    defaults: { _controller: ServerGroveTranslationEditorBundle:Editor:list }
-    requirements:
-        _method:  GET
+webs:
+    resource: "routing/webs.yml"
 
-sg_localeditor_list_missing_global:
-    pattern:  /translations/editor/global/missing
-    defaults: { _controller: ServerGroveTranslationEditorBundle:Editor:listMissingGlobal }
+iphone:
+    resource: "routing/iphone.yml"
 
+android:
+    resource: "routing/android.yml"
 
-sg_localeditor_update:
-    pattern:  /translations/update
-    defaults: { _controller: ServerGroveTranslationEditorBundle:Editor:update }
-
-sg_localeditor_add:
-    pattern:  /translations/add
-    defaults: { _controller: ServerGroveTranslationEditorBundle:Editor:add }
-
-sg_localeditor_remove:
-    pattern:  /translations/remove
-    defaults: { _controller: ServerGroveTranslationEditorBundle:Editor:remove }

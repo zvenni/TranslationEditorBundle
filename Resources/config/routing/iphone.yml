@@ -1,0 +1,19 @@
+iphone_list:
+    pattern:  /translations/iphone/editor
+    defaults: { _controller: ServerGroveTranslationEditorBundle:IphoneEditor:list }
+
+iphone_missing_global:
+    pattern:  /translations/iphone/editor/global/missing
+    defaults: { _controller: ServerGroveTranslationEditorBundle:IphoneEditor:listMissingGlobal }
+
+iphone_update:
+    pattern:  /translations/iphone/update
+    defaults: { _controller: ServerGroveTranslationEditorBundle:IphoneEditor:update }
+
+iphone_add:
+    pattern:  /translations/iphone/add
+    defaults: { _controller: ServerGroveTranslationEditorBundle:IphoneEditor:add }
+
+iphone_remove:
+    pattern:  /translations/iphone/remove
+    defaults: { _controller: ServerGroveTranslationEditorBundle:IphoneEditor:remove }

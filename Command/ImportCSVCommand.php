@@ -15,86 +15,110 @@ use Symfony\Component\Finder\Finder;
 
 class ImportCSVCommand extends Base {
 
+    private $platform = "webs";
+
     protected function configure() {
         parent::configure();
         $this->setName('locale:editor:importcsv')->setDescription('Import translation CSV into MongoDB for using through /translations/editor')->addArgument('filename')->addOption("dry-run");
     }
 
     public function execute(InputInterface $input, OutputInterface $output) {
-
-        throw new \Exception("SCRIPT NOT READY");
-
         $this->input = $input;
         $this->output = $output;
-        if( !empty($filename) && is_dir($filename) ) {
-            $filename = $this->getFilename($filename);
+        $filename = $input->getArgument('filename');
 
+        if( !empty($filename) ) {
+            $filename = $this->getCSVFile($filename);
         } else {
-            $filename = $this->getFilename();
+            $filename = $this->getCSVFile();
         }
-        //check file changes not necessary, overwrite existing keys in db, rest stays untouched
-        $output->writeln("Scanning <info>$filename</info>...");
+
+
         $this->import($filename);
     }
 
     public function import($filename) {
         $fname = basename($filename);
-
-        $this->output->writeln("Processing <info>" . $filename . "</info>...");
-
-        list($name, $locale, $type) = explode('.', $fname);
-
+        $output = $this->output;
+        //checking file changes not necessary, overwrite existing keys in db, rest stays untouched
+        $output->writeln("Scanning <info> . $filename . </info>...");
+        if( !$file = fopen($filename, "r+") ) {
+            throw new \Exception("CSV file '" . $filename . "' not found");
+        }
+        $delimiter = ";";
+        //data keys
+        $head = fgetcsv($file, 0, $delimiter);
+        $csvContent = array();
+        //create named data collection
+        while( $data = fgetcsv($file, 0, $delimiter) ) {
+            $csv = array();
+            foreach( $head as $index => $key ) {
+                $csv[$key] = $data[$index];
+            }
+            $csvContent[] = $csv;
+        }
+        //do not import empty stuff
+        if( !$csvContent ) {
+            throw new \Exception("Empty CSV file '" . $filename . "'");
+        }
         $this->setIndexes();
 
-        switch( $type ) {
-            case 'yml':
-                $m = $this->getContainer()->get('server_grove_translation_editor.storage_manager');
-                $lib = $m->extractLib($filename);
-                $entries = $this->concludeEntries($filename, $locale, $lib);
 
-                $data = $m->getCollection()->findOne(array('filename' => $filename));
-
-                if( !$data ) {
-                    $data = array('filename' => $filename,
-                                  "bundle" => $m->extractBundle($filename),
-                                  "dateImport" => new \DateTime(),
-                                  "lib" => $lib,
-                                  'locale' => $locale,
-                                  'type' => $type,
-                                  'entries' => $entries,);
-
-                } elseif( $data && $this->fileChangedAfterImport($data) ) {
-                    throw new \Exception("File '" . $data['filename'] . "' has directly been changed after last import. Resolve on reverting files and editing in TranslationEditor");
-                    return;
+        /** @var $m \ServerGrove\Bundle\TranslationEditorBundle\MongoStorageManager */
+        $m = $this->getManager($this->platform);
+        $locales = $m->getUsedLocales();
+        $changedKeys = 0;
+        #td($csvContent);
+        foreach( $csvContent as $data ) {
+            foreach( $locales as $locale ) {
+                $changedKeys++;
+                if( !isset($data[$locale]) ) {
+                    throw \Exception("Locale '" . $locale . "' not synced");
                 }
-                $this->output->writeln("  Found " . count($entries) . " entries...");
-                if( !$this->input->getOption('dry-run') ) {
-                    $this->updateValue($data);
+
+                //just update changed or new keys;
+                $key = $data['key'];
+
+                $entry = $data[$locale];
+                $dbData = $m->getEntriesByBundleAndLocalAndLib($data['bundle'], $locale, $data['lib']);
+                if( !$dbData ) {
+                    $updateData = array('filename' => $m->createFilename($locale, $data['lib']),
+                                        "bundle" => $data['bundle'],
+                                        "dateImport" => new \DateTime(),
+                                        "lib" => $data['lib'],
+                                        'locale' => $locale,
+                                        'type' => "yml",
+                                        'entries' => array($key => $entry));
+                 #   $m->insertData($updateData);
+                    $changedKeys++;
                 }
-                break;
-            case 'xliff':
-                $this->output->writeln("  Skipping, not implemented");
-                break;
+                if( !isset($dbData['entries'][$key]) || (isset($dbData['entries'][$key]) && $dbData['entries'][$key] != $entry) ) {
+                    $updateData['_id'] = $dbData['_id'];
+                    $updateData['entries'][$key] = $entry;
+                    $updateData['dateImport'] = new \DateTime();
+                    #   $m->updateData($updateData);
+                    $changedKeys++;
+                }
+            }
         }
+        $output->writeln("CSV import complete! Changed Keys: <info>" . $changedKeys . "</info>...");
     }
 
 
-
     protected function setIndexes() {
-        $collection = $this->getContainer()->get('server_grove_translation_editor.storage_manager')->getCollection();
+        $collection = $this->getManager($this->platform)->getCollection();
         $collection->ensureIndex(array("filename" => 1,
                                       'locale' => 1));
     }
 
     protected function updateValue($data) {
-        $collection = $collection = $this->getContainer()->get('server_grove_translation_editor.storage_manager')->getCollection();
+        $collection = $this->getManager($this->platform)->getCollection();
 
         $criteria = array('filename' => $data['filename'],);
 
-        $mdata = array('$set' => $data,);
-
         return $collection->update($criteria, $data, array('upsert' => true));
     }
+
 
 }
 

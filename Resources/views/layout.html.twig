@@ -14,6 +14,7 @@
 
     <!-- Le styles -->
     <link rel="stylesheet" href="http://twitter.github.com/bootstrap/1.4.0/bootstrap.min.css">
+
     <style type="text/css">
         body {
             padding-top: 60px;
@@ -31,31 +32,100 @@
 <div class="topbar">
     <div class="topbar-inner">
         <div class="container-fluid">
-            <a class="brand" href="#">LOVOO Translation Editor</a>
+            <a class="brand" href="#">LOVOO Translation Editor - {{platform}}</a>
             <ul class="nav">
-                <li><a href="#" onclick="$('.alert-message').hide();$('#newtranslation').show();$('#key').focus(); return false;">New Entry</a></li>
-                <li><a href="#" onclick="this.innerHTML = 'Reloading...';window.location.reload(); return false;">Reload List</a></li>
-                <li><a href="https://github.com/servergrove/TranslationEditorBundle">About</a></li>
+                <li><a href="#"
+                       onclick="$('.alert-message').hide();$('#newtranslation').show();$('#key').focus(); return false;">New
+                    Entry</a></li>
+                <li><a href="#" onclick="this.innerHTML = 'Reloading...';window.location.reload(); return false;">Reload
+                    List</a></li>
+            </ul>
+
+
+            {{block("paging")}}
+
+            <ul class="nav right">
+               {# <li><a href="{{ path("webs_list")}}">Webs</a></li>#}
+                <li><a href="{{ path("iphone_list")}}">Iphone</a></li>
+              {#  <li><a href="{{ path("android_list")}}">Android</a></li>#}
+
             </ul>
         </div>
     </div>
 </div>
 
+<style>
+    .nav.right {
+        float: right;
+    }
+
+    .nav.right li {
+        width: 100px;
+        text-align: center;
+        background: #9ACD32;
+    }
+
+    .nav.right li:hover {
+        background: #AADD42;
+    }
+
+    .nav.right li a {
+        color: #000000;
+        border-right: 1px solid #333333;
+        border-bottom: 1px solid #333333;
+    }
+
+    .nav.right li a:hover {
+        color: #000000;
+    }
+</style>
+
 <div class="container-fluid">
     <div class="sidebar">
+        {% if platform == "webs" %}
         <div class="well">
-            <input id="remove-10" class=" btn success" type="button" onclick="location.href='{{sidebar.link.listMissingGlobal}}'; return false" value="Missing global >">
+            <input id="remove-10" class=" btn success" type="button"
+                   onclick="location.href='{{sidebar.link.listMissingGlobal}}'; return false" value="Missing global >">
             <h5>File Overview</h5>
             <ul>
                 {% for bname, bundle in sidebar.data %}
                 <h6 style="color:#111111;">{{bname}}</h6>
 
                 {% for file in  bundle %}
-                <a href="{{path("sg_localeditor_list", {"bundle": bname, "lib":file.lib} ) }}">{{file.lib}} ({{file.entryCount}})</a><br>
+                <a href="{{path("webs_list", {"bundle": bname, "lib":file.lib} ) }}">{{file.lib}}
+                    ({{file.entryCount}})</a><br>
                 {% endfor%}
                 {%endfor%}
             </ul>
         </div>
+        {% endif %}
+
+        {% if platform == "iphone" %}
+        <div class="well">
+            {#<input id="remove-10" class=" btn success" type="button" onclick="location.href='{{sidebar.link.listMissingGlobal}}'; return false" value="Missing global >">#}
+            <h5>File Overview</h5>
+            <ul>
+                {% for lib in  sidebar.libs %}
+                <a href="{{path(path, {"lib": lib.lib} ) }}">{{lib.lib}}
+                    ({{lib.entryCount}})</a><br>
+                {% endfor%}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if platform == "android" %}
+        <div class="well">
+            {#<input id="remove-10" class=" btn success" type="button" onclick="location.href='{{sidebar.link.listMissingGlobal}}'; return false" value="Missing global >">#}
+            <h5>File Overview</h5>
+            <ul>
+                {% for lib in  sidebar.libs %}
+                <a href="{{path(path, {"lib": lib.lib} ) }}">{{lib.lib}}
+                    ({{lib.entryCount}})</a><br>
+                {% endfor%}
+            </ul>
+        </div>
+        {% endif %}
+
         <div class="well">
             <h5>Available Locales</h5>
             <ul>
@@ -68,11 +138,13 @@
 
         </div>
     </div>
+
     <div class="content">
         {% block body %}
         {% endblock %}
     </div>
 </div>
+
 
 </body>
 

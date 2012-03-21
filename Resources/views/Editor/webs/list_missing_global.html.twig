@@ -1,0 +1,124 @@
+{% extends "ServerGroveTranslationEditorBundle::layout.html.twig" %}
+
+{% block sidebar %}
+<script>
+    function saveChange(id, key, locale, bundle, lib) {
+        $('#save-' + id).val('Saving...');
+
+        var newVal = $('#editor-' + id + ' textarea').val();
+
+        $.ajax({
+            type:"POST",
+            url:'{{path(platform ~ '_update')}}',
+            data:{'key':key, 'locale':locale, 'val':newVal, bundle:bundle, lib:lib},
+            success:function (data) {
+                $('#save-' + id).val('Save');
+                $('#current-' + id + '-content').html(newVal);
+                hideEditor(id);
+            }
+        });
+    }
+
+    function removeEntry(id, key, bundle, lib) {
+        $('#remove-' + id).val('Removing...');
+
+        $.ajax({
+            type:"POST",
+            url:'{{path(platform ~ '_remove')}}',
+            data:{'key':key, bundle:bundle, lib:lib},
+            success:function (data) {
+                $('#entry-' + id).remove();
+            }
+        });
+    }
+
+</script>
+<style>
+    .editor {
+        display: none;
+    }
+
+    .editor textarea {
+        width: 100%;
+        height: 100px;
+    }
+
+    .mysmall {
+        padding: 5px;
+        width: 50px;
+        font-size: 9px;
+    }
+
+</style>
+<h5>Stats</h5>
+<ul>
+    <li><a href="#" onclick="showMissing(); return false;">Missing translations global: {{trlKeys.entriesCount}}</a></li>
+</ul>
+{% endblock %}
+
+{% block body %}
+
+<table class="zebra-striped">
+    <thead>
+    <tr>
+        <th>Key</th>
+        {% set default = trlKeys.default %}
+        {% for locale in trlKeys.locales %}
+        <th>{{locale}}
+            {% if locale == default %}<span class="label">Default</span>{%endif%}
+        </th>
+        {% endfor %}
+        <th>Bundle::lib</th>
+        <th></th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for  lib in trlKeys.entries %}
+    {% for key, entry in lib.entries %}
+
+    <tr id="entry-{{loop.index}}" class="missing">
+        <td>{{key}}</td>
+        {% for locale in trlKeys.locales %}
+        <td>
+            <div id="current-{{loop.parent.loop.index}}-{{locale}}">
+                {% set translation = entry[locale] %}
+
+                {% set exists = translation ? true : null %}
+                <div id="current-{{loop.parent.loop.index}}-{{locale}}-content"
+                     onclick="showEditor('{{loop.parent.loop.index}}-{{locale}}')">{% if exists %}{{translation}}{%endif%}</div>
+                {% if locale != default and exists and translation == entry[default] %}
+                <span class="label warning">Duplicate</span>
+                {% endif %}
+                {% if ( not exists or translation|length == 0 )  %}
+                <span class="label important"
+                      onclick="showEditor('{{loop.parent.loop.index}}-{{locale}}')">Missing</span>
+                {% endif %}
+            </div>
+            <div id="editor-{{loop.parent.loop.index}}-{{locale}}" class="editor">
+                <textarea>{% if exists %}{{translation}}{%endif%}</textarea><br/>
+                <input id="save-{{loop.parent.loop.index}}-{{locale}}" class="btn mysmall success" type="button"
+                       value="Save"
+                       onclick="saveChange('{{loop.parent.loop.index}}-{{locale}}', '{{key|e('js')}}', '{{locale}}', '{{ lib.bundle}}', '{{lib.lib}}')">
+                <input class="btn mysmall" type="button" value="Cancel"
+                       onclick="hideEditor('{{loop.parent.loop.index}}-{{locale}}')">
+            </div>
+        </td>
+        {% endfor %}
+        <td>{{lib.bundle}}::{{lib.lib}}</td>
+        <td>
+            <input id="remove-{{loop.index}}" class=" btn danger small" type="button" value="Remove"
+                   onclick="confirm('Are you sure?') && removeEntry('{{loop.index}}', '{{key}}', '{{lib.bundle}}', '{{lib.lib}}')">
+        </td>
+    </tr>
+    {% endfor %}
+    {% endfor %}
+    </tbody>
+</table>
+<!-- Example row of columns -->
+
+<footer>
+    <p>&copy; ServerGrove feat. LOVOO 2012</p>
+</footer>
+</div>
+
+{% endblock %}

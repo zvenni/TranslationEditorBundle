@@ -1,0 +1,217 @@
+{% extends "ServerGroveTranslationEditorBundle::layout.html.twig" %}
+
+{% use "ServerGroveTranslationEditorBundle::paging.html.twig" %}
+
+{% block sidebar %}
+<script>
+    var Editor = {
+        editors:[],
+        lib:"",
+        platform:"",
+
+        hideEditor:function (id) {
+            //alle offernenen Editors weg
+            $(".editor").addClass("none");
+            //alle zunen Trext rein
+            $(".trlText").removeClass("none");
+            $('#editor-' + id).unbind("keypress");
+        },
+
+        showEditor:function (id) {
+            //console.log(id);
+            //alle offernenen Editors weg
+            Editor.hideEditor(id);
+            //das gewählte: text wege, editor rein
+            $('#current-' + id).addClass("none");
+            $('#editor-' + id).removeClass("none");
+            //focous ins feld und tab überwachung
+            $('#editor-' + id + ' textarea').focus();
+            Editor.tabulate(id);
+        },
+
+
+        tabulate:function (id) {
+            var eleId = '#editor-' + id
+            $(eleId).bind('keypress', function (event) {
+                if (event.keyCode == 9) {
+                    var nextId = Editor.getNext(id);
+                    var splitId = Editor.splitId(id);
+                    var key = $("#key-" + splitId[0]).html();
+                    var locale = splitId[1];
+                    var onTab = true;
+
+                    Editor.saveChange(id, key, locale, Editor.platform, Editor.lib, onTab);
+                    Editor.showEditor(nextId);
+                }
+            });
+        },
+
+        splitId:function (id) {
+            var split = id.split("-");
+            return split;
+        },
+
+        getNext:function (currentId) {
+            var index = Editor.editors.indexOf(currentId);
+            index++;
+            if (index >= Editor.editors.length) {
+                index = 0;
+            }
+            return Editor.editors[index];
+        },
+
+        editorIds:function () {
+            var currentTable = $("table#translations");
+            var elements = $(".editor", currentTable)
+
+            elements.each(function (index, value) {
+                var id = "#" + $(value).attr("id");
+                var split = id.split("#editor-");
+                Editor.editors.push(split[1]);
+            });
+        },
+
+
+        showMissing:function () {
+            $('.zebra-striped tbody tr.ok').hide();
+        },
+
+
+        saveChange:function (id, key, locale, platform, lib, onTab) {
+
+            $('#save-' + id).val('Saving...');
+            var newVal = $('#editor-' + id + ' textarea').val();
+
+            $.ajax({
+                type:"POST",
+                url:'{{path(platform ~ '_update')}}',
+                data:{'key':key, 'locale':locale, 'val':newVal, platform:platform, lib:lib},
+                success:function (data) {
+                    $('#save-' + id).val('Save');
+                    $('#current-' + id + '-content').html(newVal);
+                    if (!onTab) {
+                        Editor.hideEditor(id);
+                    }
+                }
+            });
+        },
+
+        removeEntry:function (id, key, platform, lib) {
+            $('#remove-' + id).val('Removing...');
+
+            $.ajax({
+                type:"POST",
+                url:'{{path(platform ~ '_remove')}}',
+                data:{'key':key, platform:platform, lib:lib},
+                success:function (data) {
+                    $('#entry-' + id).remove();
+                }
+            });
+        }
+
+    };
+</script>
+<script type="text/javascript">
+    $(document).ready(function () {
+        Editor.editorIds();
+        var info = $("th#info").html().split("::");
+        Editor.lib = info[1];
+        Editor.platform = info[0];
+
+    });
+</script>
+<style>
+    .none {
+        display: none;
+    }
+
+    .editor {
+        /* display: none;*/
+    }
+
+    .editor textarea {
+        width: 100%;
+        height: 100px;
+    }
+
+    .mysmall {
+        padding: 5px;
+        width: 50px;
+        font-size: 9px;
+    }
+
+</style>
+<h5>Stats</h5>
+<ul>
+    <li><a href="#" onclick="Editor.showMissing(); return false;">Missing translations
+        global: {{trlKeys.entriesCount}}</a></li>
+</ul>
+{% endblock %}
+
+{% block body %}
+
+{{ block("paging") }}
+
+<table class="zebra-striped">
+    <thead>
+    <tr>
+        <th>Key</th>
+        {% set default = trlKeys.default %}
+        {% for locale in trlKeys.locales %}
+        <th>{{locale}}
+            {% if locale == default %}<span class="label">Default</span>{%endif%}
+        </th>
+        {% endfor %}
+        <th>platform::lib</th>
+        <th></th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for  lib, entries in trlKeys.entries %}
+    {% for key, entry in entries %}
+    <tr id="entry-{{loop.index}}" class="missing">
+        <td id="key-{{loop.index}}">{{key}}</td>
+        {% for locale in trlKeys.locales %}
+        <td>
+            <div id="current-{{loop.parent.loop.index}}-{{locale}}" class="trlText">
+                {% set translation = entry[locale] %}
+
+                {% set exists = translation ? true : null %}
+                <div id="current-{{loop.parent.loop.index}}-{{locale}}-content"
+                     onclick="Editor.showEditor('{{loop.parent.loop.index}}-{{locale}}')">{% if exists %}{{translation}}{%endif%}</div>
+                {% if locale != default and exists and translation == entry[default] %}
+                <span class="label warning">Duplicate</span>
+                {% endif %}
+                {% if ( not exists or translation|length == 0 )  %}
+                <span class="label important"
+                      onclick="Editor.showEditor('{{loop.parent.loop.index}}-{{locale}}')">Missing</span>
+                {% endif %}
+            </div>
+            <div id="editor-{{loop.parent.loop.index}}-{{locale}}" class="editor none">
+                <textarea>{% if exists %}{{translation}}{%endif%}</textarea><br/>
+                <input id="save-{{loop.parent.loop.index}}-{{locale}}" class="btn mysmall success" type="button"
+                       value="Save"
+                       onclick="Editor.saveChange('{{loop.parent.loop.index}}-{{locale}}', '{{key|e('js')}}', '{{locale}}', '{{ platform}}', '{{lib}}', false)">
+                <input class="btn mysmall" type="button" value="Cancel"
+                       onclick="Editor.hideEditor('{{loop.parent.loop.index}}-{{locale}}')">
+            </div>
+        </td>
+        {% endfor %}
+        <td>{{platform}}::{{lib}}</td>
+        <td>
+            <input id="remove-{{loop.index}}" class=" btn danger small" type="button" value="Remove"
+                   onclick="confirm('Are you sure?') && Editor.removeEntry('{{loop.index}}', '{{key}}', '{{platform}}', '{{lib}}')">
+        </td>
+    </tr>
+    {% endfor %}
+    {% endfor %}
+    </tbody>
+</table>
+<!-- Example row of columns -->
+
+<footer>
+    <p>&copy; ServerGrove feat. LOVOO 2012</p>
+</footer>
+</div>
+
+{% endblock %}

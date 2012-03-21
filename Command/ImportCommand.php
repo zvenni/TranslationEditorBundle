@@ -12,7 +12,10 @@ use Symfony\Component\Translation\Loader\YamlFileLoader;
 /**
  * Command for importing translation files
  */
+
 class ImportCommand extends Base {
+
+    private $platform = "webs";
 
     protected function configure() {
         parent::configure();
@@ -22,9 +25,11 @@ class ImportCommand extends Base {
     public function execute(InputInterface $input, OutputInterface $output) {
         $this->input = $input;
         $this->output = $output;
+
         $filename = $input->getArgument('filename');
+
         $files = array();
-        //certain fil
+
         if( !empty($filename) && is_dir($filename) ) {
             $output->writeln("Importing translations from <info>$filename</info>...");
             $finder = new Finder();
@@ -34,9 +39,10 @@ class ImportCommand extends Base {
                 $output->writeln("Found <info>" . $file->getRealpath() . "</info>...");
                 $files[] = $file->getRealpath();
             }
+
         } else {
-            //fetch all trl files
             $dir = $this->getContainer()->getParameter('kernel.root_dir') . '/../src';
+
             $output->writeln("Scanning " . $dir . "...");
             $finder = new Finder();
             $finder->directories()->in($dir)->name('translations');
@@ -50,33 +56,33 @@ class ImportCommand extends Base {
                 }
             }
         }
-        //there is nothing to do
+
         if( !count($files) ) {
             $output->writeln("<error>No files found.</error>");
             return;
         }
-        //DB and Trl files synchron?
-        foreach( $files as $filename ) {
-            $this->syncFileForTransfer($filename);
-        }
-        //ething ok - let's import some files
         $output->writeln(sprintf("Found %d files, importing...", count($files)));
+
         foreach( $files as $filename ) {
             $this->import($filename);
         }
     }
 
-
     public function import($filename) {
         $fname = basename($filename);
+
         $this->output->writeln("Processing <info>" . $filename . "</info>...");
+
         list($name, $locale, $type) = explode('.', $fname);
+
         $this->setIndexes();
+
         switch( $type ) {
             case 'yml':
-                $m = $this->getContainer()->get('server_grove_translation_editor.storage_manager');
+                $m = $this->getManager($this->platform);
                 $lib = $m->extractLib($filename);
                 $entries = $this->concludeEntries($filename, $locale, $lib);
+
                 $data = $m->getCollection()->findOne(array('filename' => $filename));
 
                 if( !$data ) {
@@ -88,6 +94,9 @@ class ImportCommand extends Base {
                                   'type' => $type,
                                   'entries' => $entries,);
 
+                } elseif( $data && $this->fileChangedAfterImportOld($data) ) {
+                    throw new \Exception("File '" . $data['filename'] . "' has directly been changed after last import. Resolve on reverting files and editing in TranslationEditor");
+                    return;
                 }
                 $this->output->writeln("  Found " . count($entries) . " entries...");
                 if( !$this->input->getOption('dry-run') ) {
@@ -100,17 +109,25 @@ class ImportCommand extends Base {
         }
     }
 
+    private function concludeEntries($filename, $locale, $lib) {
+        $yamlFileLoader = new YamlFileLoader();
+        $entries = $yamlFileLoader->load($filename, $locale, $lib)->all($lib);
+        return $entries;
+    }
 
     protected function setIndexes() {
-        $collection = $this->getContainer()->get('server_grove_translation_editor.storage_manager')->getCollection();
+        $collection = $this->getManager($this->platform)->getCollection();
         $collection->ensureIndex(array("filename" => 1,
                                       'locale' => 1));
     }
 
     protected function updateValue($data) {
-        $collection = $collection = $this->getContainer()->get('server_grove_translation_editor.storage_manager')->getCollection();
+        $collection = $this->getManager($this->platform)->getCollection();
         $criteria = array('filename' => $data['filename'],);
+
         return $collection->update($criteria, $data, array('upsert' => true));
     }
 
 }
+
+
