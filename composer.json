@@ -1,5 +1,5 @@
 {
-    "name": "servergrove/translation-editor-bundle",
+    "name": "zvenni/translation-editor-bundle",
     "description": "Web based UI to manage Symfony2 translations",
     "keywords": ["symfony2", "translations", "locale", "editor"],
     "homepage": "http://github.com/servergrove/TranslationEditorBundle",
