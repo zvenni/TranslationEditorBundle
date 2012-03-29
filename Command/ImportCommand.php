@@ -100,7 +100,7 @@ class ImportCommand extends Base {
                 }
                 $this->output->writeln("  Found " . count($entries) . " entries...");
                 if( !$this->input->getOption('dry-run') ) {
-                    $this->updateValue($data);
+                   // $this->updateValue($data);
                 }
                 break;
             case 'xliff':

@@ -63,18 +63,23 @@ class ImportIphoneCommand extends Base {
         $m = $this->getManager($this->platform);
         $locales = $m->getUsedLocales();
         $dt = new \DateTime();
+
         foreach( $locales as $locale ) {
+
             $content = $m->parseContent($lib, $locale);
+
             foreach( $content as $cnt ) {
                 $translation = array();
-                # $this->output->writeln("Writing entry <info>'" . $cnt['key'] . "'</info>...");
+                $this->output->writeln("Writing entry <info>'" . $cnt['key'] . "'</info>...");
                 $key = $cnt['key'];
                 $shaked = $m->shakeYaBoody($key);
                 $data = $m->getCollection($this->platform)->findOne(array('lib' => $lib,
                                                                          "platform" => $this->platform,
                                                                          "key" => $shaked));
 
+
                 if( !$data ) {
+
                     $this->output->writeln("Key not found - <info>install</info>...");
                     $filename = $m->getFilenameForLibAndLocale($lib, $locale);
                     $translation[$locale] = $cnt['trl'];
@@ -93,14 +98,27 @@ class ImportIphoneCommand extends Base {
                         $data['entries'][$locale] = "";
                     }*/
 
-                } elseif( $data && $this->fileChangedAfterImport($data) ) {
-                    throw new \Exception("File '" . $data['filename'] . "' has directly been changed after last import . Resolve on reverting files and editing in TranslationEditor");
-                    return;
+                #} elseif( $data && $this->fileChangedAfterImport($data) ) {
+                    #  throw new \Exception("File '" . $data['filename'] . "' has directly been changed after last import . Resolve on reverting files and editing in TranslationEditor");
+                    #   return;
                 } else {
-                    $this->output->writeln("Key found - <info>update</info>...");
-                    $data["dateImport"] = $dt;
 
-                  /*  if( $locale == "en" ) {
+
+
+                    $this->output->writeln("Key found - <info> (" . $locale . ")" . $data['keyOrig'] . "</info>...");
+                    $data["dateImport"] = $dt;
+#if ( $locale == "de"&& $cnt['key'] == "test") {
+#    print_r($cnt['trl']);
+#}
+
+                    if( isset($cnt['trl']) && !empty($cnt['trl']) ) { #die("dssdds");
+                        $data['entries'][$locale] = $cnt['trl'];
+
+
+                    }
+
+
+                    /*  if( $locale == "en" ) {
                         $data['entries'][$locale] = "";
                     } else {
                         $data['entries'][$locale] = $cnt['trl'];
@@ -109,7 +127,7 @@ class ImportIphoneCommand extends Base {
 
                 }
                 if( !$this->input->getOption('dry-run') ) {
-                    #td($data);
+
                     $this->updateValue($data);
                 }
             }

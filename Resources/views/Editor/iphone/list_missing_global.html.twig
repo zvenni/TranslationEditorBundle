@@ -1,8 +1,7 @@
 {% extends "ServerGroveTranslationEditorBundle::layout.html.twig" %}
-
 {% use "ServerGroveTranslationEditorBundle::paging.html.twig" %}
-
 {% block sidebar %}
+
 <script>
     var Editor = {
         editors:[],
@@ -28,7 +27,6 @@
             $('#editor-' + id + ' textarea').focus();
             Editor.tabulate(id);
         },
-
 
         tabulate:function (id) {
             var eleId = '#editor-' + id
@@ -197,7 +195,7 @@
             </div>
         </td>
         {% endfor %}
-        <td>{{platform}}::{{lib}}</td>
+        <td info="">{{platform}}::{{lib}}</td>
         <td>
             <input id="remove-{{loop.index}}" class=" btn danger small" type="button" value="Remove"
                    onclick="confirm('Are you sure?') && Editor.removeEntry('{{loop.index}}', '{{key}}', '{{platform}}', '{{lib}}')">

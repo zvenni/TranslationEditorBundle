@@ -92,8 +92,8 @@ class ImportAndroidCommand extends Base {
 
 
                 } elseif( $data && $this->fileChangedAfterImport($data) ) {
-                    throw new \Exception("File '" . $data['filename'] . "' has directly been changed after last import . Resolve on reverting files and editing in TranslationEditor");
-                    return;
+                 ##   throw new \Exception("File '" . $data['filename'] . "' has directly been changed after last import . Resolve on reverting files and editing in TranslationEditor");
+                 #  return;
                 } else {
                     $this->output->writeln("Key found - <info>update</info>...");
                     $data["dateImport"] = $dt;

@@ -56,9 +56,7 @@ class ExportIphoneCommand extends Base {
             //deal entrys
             $this->export($lib);
         }
-
     }
-
 
     public function export($lib) {
         /** @var $m \ServerGrove\Bundle\TranslationEditorBundle\Manager\IphoneManager */
@@ -68,8 +66,8 @@ class ExportIphoneCommand extends Base {
         $results = $m->getResultsByLib($lib);
         //invalid db entry
         if( !$results ) {
-            throw new \Exception("Could not find any data for " . ucfirst($lib));
-            return;
+           throw new \Exception("Could not find any data for " . ucfirst($lib));
+           return;
         }
         $locales = $m->getUsedLocales();
         foreach( $locales as $locale ) {
@@ -84,7 +82,7 @@ class ExportIphoneCommand extends Base {
                 $count++;
                 $key = $data['keyOrig'];
                 $trl = $data['entries'][$locale];
-                $line = "\"" . $key . "\" = \"" . $trl . "\";\n";
+                $line = "\"" . trim($key) . "\" = \"" . trim($trl) . "\";\n";
                 $content[] = $line;
                 //update Date neu setzen for synchonization
                 $data['dateImport'] = $dt;

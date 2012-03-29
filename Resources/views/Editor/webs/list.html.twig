@@ -1,110 +1,183 @@
 {% extends "ServerGroveTranslationEditorBundle::layout.html.twig" %}
 
 {% block sidebar %}
-<script>
+<script type="text/javascript">
+    var Editor = {
+        editors:[],
+        lib:"",
+        bundle: "",
+        platform : "",
 
-    function showAll() {
-        $('.zebra-striped tbody tr.ok').show();
-    }
 
-    function showMissing() {
-        $('.zebra-striped tbody tr.ok').hide();
-    }
+        showAll:function () {
+            $('.zebra-striped tbody tr.ok').show();
+        },
 
-    function showEditor(id) {
-        $('#current-' + id).hide();
-        $('#editor-' + id).show();
-        $('#editor-' + id + ' textarea').focus();
-    }
+        showMissing:function () {
+            $('.zebra-striped tbody tr.ok').hide();
+        },
 
-    function hideEditor(id) {
-        $('#current-' + id).show();
-        $('#editor-' + id).hide();
-    }
+        hideEditor:function (id) {
+            //alle offernenen Editors weg
+            $(".editor").addClass("none");
+            //alle zunen Trext rein
+            $(".trlText").removeClass("none");
+            $('#editor-' + id).unbind("keypress");
+        },
 
-    function saveChange(id, key, locale, bundle, lib) {
-        $('#save-' + id).val('Saving...');
+        showEditor:function (id) {
+            //console.log(id);
+            //alle offernenen Editors weg
+            Editor.hideEditor(id);
+            //das gewählte: text wege, editor rein
+            $('#current-' + id).addClass("none");
+            $('#editor-' + id).removeClass("none");
+            //focous ins feld und tab überwachung
+            $('#editor-' + id + ' textarea').focus();
+            Editor.tabulate(id);
+        },
 
-        var newVal = $('#editor-' + id + ' textarea').val();
+        tabulate:function (id) {
+            var eleId = '#editor-' + id
+            $(eleId).bind('keypress', function (event) {
+                if (event.keyCode == 9) {
+                    var nextId = Editor.getNext(id);
+                    var splitId = Editor.splitId(id);
+                    var key = $("#key-" + splitId[0]).html();
+                    var locale = splitId[1];
+                    var onTab = true;
 
-        $.ajax({
-            type:"POST",
-            url:'{{path('webs_update')}}',
-            data:{'key':key, 'locale':locale, 'val':newVal, bundle:bundle, lib:lib},
-            success:function (data) {
-                $('#save-' + id).val('Save');
-                $('#current-' + id + '-content').html(newVal);
-                hideEditor(id);
+                    Editor.saveChange(id, key, locale, Editor.bundle, Editor.lib, onTab);
+                    Editor.showEditor(nextId);
+                }
+            });
+        },
+
+        splitId:function (id) {
+            var split = id.split("-");
+            return split;
+        },
+
+        getNext:function (currentId) {
+            var index = Editor.editors.indexOf(currentId);
+            index++;
+            if (index >= Editor.editors.length) {
+                index = 0;
             }
-        });
-    }
+            return Editor.editors[index];
+        },
 
-    function removeEntry(id, key, bundle, lib) {
-        $('#remove-' + id).val('Removing...');
+        editorIds:function () {
+            var currentTable = $("table#translations");
+            var elements = $(".editor", currentTable)
 
-        $.ajax({
-            type:"POST",
-            url:'{{path('webs_remove')}}',
-            data:{'key':key, bundle:bundle, lib:lib},
-            success:function (data) {
-                $('#entry-' + id).remove();
+            elements.each(function (index, value) {
+                var id = "#" + $(value).attr("id");
+                var split = id.split("#editor-");
+                Editor.editors.push(split[1]);
+            });
+        },
+
+        saveChange:function (id, key, locale, bundle, lib, onTab) {
+            $('#save-' + id).val('Saving...');
+            var newVal = $('#editor-' + id + ' textarea').val();
+
+            $.ajax({
+                type:"POST",
+                url:'{{path(platform ~ '_update')}}',
+                data:{'key':key, 'locale':locale, 'val':newVal, bundle:bundle, lib:lib},
+                success:function (data) {
+                    $('#save-' + id).val('Save');
+                    $('#current-' + id + '-content').html(newVal);
+                    if ( !onTab ) {
+                        Editor.hideEditor(id);
+                    }
+                }
+            });
+        },
+
+        removeEntry:function (id, key, bundle, lib) {
+            $('#remove-' + id).val('Removing...');
+
+            $.ajax({
+                type:"POST",
+                url:'{{path(platform ~ '_remove')}}',
+                data:{'key':key, bundle:bundle, lib:lib},
+                success:function (data) {
+                    $('#entry-' + id).remove();
+                }
+            });
+        },
+
+        submitAjaxForm:function (form, checkOnly) {
+            if (typeof(checkOnly) == 'undefined') {
+                checkOnly = false;
             }
-        });
-    }
 
-    function submitAjaxForm(form, checkOnly) {
-        if (typeof(checkOnly) == 'undefined') {
-            checkOnly = false;
-        }
+            var url = form.attr('action');
+            //var url = form.action;
 
-        var url = form.attr('action');
-        //var url = form.action;
+            $('#check-only').val(checkOnly ? 1 : 0);
 
-        $('#check-only').val(checkOnly ? 1 : 0);
+            var data = form.serializeArray();
+            $('.alert-message').hide();
 
-        var data = form.serializeArray();
-        $('.alert-message').hide();
-
-        console.log(data);
-        $.ajax({
-            url:url,
-            dataType:'json',
-            data:data,
-            type:'POST',
-            success:function (data) {
-                if (data && data.result == true) {
-                    if (!checkOnly) {
-                        /*if ( data.redirect)  {
-                         return location.href = data.redirect;
-                         }*/
-                        $('#key').val('');
-                        $('#key').focus();
-                        $('#newtranslation textarea').val('');
-                        $('#insert-ok').html('New translation inserted successfully');
-                        $('#insert-ok').show();
+            console.log(data);
+            $.ajax({
+                url:url,
+                dataType:'json',
+                data:data,
+                type:'POST',
+                success:function (data) {
+                    if (data && data.result == true) {
+                        if (!checkOnly) {
+                            /*if ( data.redirect)  {
+                             return location.href = data.redirect;
+                             }*/
+                            $('#key').val('');
+                            $('#key').focus();
+                            $('#newtranslation textarea').val('');
+                            $('#insert-ok').html('New translation inserted successfully');
+                            $('#insert-ok').show();
+                        } else {
+                            //$('#insert-ok').html('Key not found.');
+                            // $('#insert-ok').show();
+                        }
                     } else {
-                        //$('#insert-ok').html('Key not found.');
-                        // $('#insert-ok').show();
+                        if (data && data.msg) {
+                            $('#errmsg').html(': ' + data.msg);
+                        } else {
+                            $('#errmsg').html('');
+                        }
+                        $('#insert-error').show();
                     }
-                } else {
-                    if (data && data.msg) {
-                        $('#errmsg').html(': ' + data.msg);
-                    } else {
-                        $('#errmsg').html('');
-                    }
-                    $('#insert-error').show();
+
                 }
 
-            }
+            });
+            return false;
+        }
+    }
+</script>
 
-        });
-        return false;
+<script type="text/javascript">
+    $(document).ready(function () {
+        Editor.editorIds();
+        var info = $("th#info").html().split("::");
+        Editor.lib = info[1];
+        Editor.platform = '{{ platform }}';
+        Editor.bundle = info[0];
+
+    });
+</script>
+
+<style>
+    .none {
+        display: none;
     }
 
-</script>
-<style>
     .editor {
-        display: none;
+        /*   display: none;*/
     }
 
     .editor textarea {
@@ -119,20 +192,21 @@
     }
 
 </style>
+
 <h5>Stats</h5>
 <ul>
-    <li><a href="#" onclick="showAll(); return false;">All Entries: {{trlKeys.entries|length}}</a></li>
-    <li><a href="#" onclick="showMissing(); return false;">Missing translations: {{trlKeys.missing.all}}</a></li>
+    <li><a href="#" onclick="Editor.showAll(); return false;">All Entries: {{trlKeys.entries|length}}</a></li>
+    <li><a href="#" onclick="Editor.showMissing(); return false;">Missing translations: {{trlKeys.missing.all}}</a></li>
 </ul>
 {% endblock %}
 
 {% block body %}
 
 <form id="newtranslation" style="display: none" method="POST"
-      onsubmit="return submitAjaxForm($('#newtranslation'))" action="{{path('webs_add')}}">
+      onsubmit="return Editor.submitAjaxForm($('#newtranslation'))" action="{{path(platform ~ '_add')}}">
     <input type="hidden" id="check-only" name="check-only" value="0"/>
     <label>Key:</label> <input type="text" id="key" name="key" style="width: 700px"
-                               onchange="submitAjaxForm($('#newtranslation'), true)"/> </br>
+                               onchange="Editor.submitAjaxForm($('#newtranslation'), true)"/> </br>
     {% for locale in trlKeys.locales %}
     <label>{{locale}}:</label> <textarea name="locale[{{locale}}]" style="width: 700px; height: 100px"></textarea> </br>
     {% endfor %}
@@ -147,7 +221,7 @@
     <p id="insert-error" class="alert-message error" style="display: none">An error ocurred while adding the translation<span
             id="errmsg"></span></p>
 </form>
-<table class="zebra-striped">
+<table id="translations" class="zebra-striped">
     <thead>
     <tr>
         <th>Key</th>
@@ -157,46 +231,46 @@
             {% if locale == default %}<span class="label">Default</span>{%endif%}
         </th>
         {% endfor %}
-        <th>{{trlKeys.bundle}}::{{trlKeys.lib}}</th>
+        <th id="info">{{trlKeys.bundle}}::{{trlKeys.lib}}</th>
     </tr>
     </thead>
     <tbody>
     {% for  key, translates in trlKeys.entries %}
     <tr id="entry-{{loop.index}}" {{trlKeys.missing.entries[key] is defined ? 'class="missing"' : 'class="ok"'}}>
-        <td>{{key}}</td>
+        <td id="key-{{loop.index}}">{{key}}</td>
         {% for locale in trlKeys.locales %}
         <td>
-            <div id="current-{{loop.parent.loop.index}}-{{locale}}">
+            <div id="current-{{loop.parent.loop.index}}-{{locale}}" class="trlText">
                 {% set translation = translates[locale] %}
                 {% set exists = translation ? true : null %}
                 <div id="current-{{loop.parent.loop.index}}-{{locale}}-content"
-                     onclick="showEditor('{{loop.parent.loop.index}}-{{locale}}')">{% if exists %}{{translation}}{%endif%}</div>
+                     onclick="Editor.showEditor('{{loop.parent.loop.index}}-{{locale}}')">{% if exists %}{{translation}}{%endif%}</div>
                 {% if locale != default and exists and translation == translates[default] %}
                 <span class="label warning">Duplicate</span>
                 {% endif %}
                 {% if ( not exists or translation|length == 0 ) and (trlKeys.missing.entries[key] is defined and ( locale != default or not trlKeys.missing.entries[key] )) %}
                 <span class="label important"
-                      onclick="showEditor('{{loop.parent.loop.index}}-{{locale}}')">Missing</span>
+                      onclick="Editor.showEditor(('{{loop.parent.loop.index}}-{{locale}}')">Missing</span>
                 {% endif %}
                 {% if ( not exists or translation|length == 0 ) and locale == default  and trlKeys.missing.entries[key]is defined and trlKeys.missing.entries[key] %}
                 <span style="background: #0069d6;" class="label less important"
-                      onclick="showEditor('{{loop.parent.loop.index}}-{{locale}}')">equals Key</span>
+                      onclick="Editor.showEditor('{{loop.parent.loop.index}}-{{locale}}')">equals Key</span>
                 {% endif %}
 
             </div>
-            <div id="editor-{{loop.parent.loop.index}}-{{locale}}" class="editor">
+            <div id="editor-{{loop.parent.loop.index}}-{{locale}}" class="editor none">
                 <textarea>{% if exists %}{{translation}}{%endif%}</textarea><br/>
                 <input id="save-{{loop.parent.loop.index}}-{{locale}}" class="btn mysmall success" type="button"
                        value="Save"
-                       onclick="saveChange('{{loop.parent.loop.index}}-{{locale}}', '{{key|e('js')}}', '{{locale}}', '{{ trlKeys.bundle}}', '{{trlKeys.lib}}')">
+                       onclick="Editor.saveChange('{{loop.parent.loop.index}}-{{locale}}', '{{key|e('js')}}', '{{locale}}', '{{ trlKeys.bundle}}', '{{trlKeys.lib}}')">
                 <input class="btn mysmall" type="button" value="Cancel"
-                       onclick="hideEditor('{{loop.parent.loop.index}}-{{locale}}')">
+                       onclick="Editor.hideEditor('{{loop.parent.loop.index}}-{{locale}}')">
             </div>
         </td>
         {% endfor %}
         <td>
             <input id="remove-{{loop.index}}" class=" btn danger mysmall" type="button" value="Remove"
-                   onclick="confirm('Are you sure?') && removeEntry('{{loop.index}}', '{{key}}', '{{trlKeys.bundle}}', '{{trlKeys.lib}}')">
+                   onclick="confirm('Are you sure?') && Editor.removeEntry('{{loop.index}}', '{{key}}', '{{trlKeys.bundle}}', '{{trlKeys.lib}}')">
         </td>
     </tr>
     {% endfor %}

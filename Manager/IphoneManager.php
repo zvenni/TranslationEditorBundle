@@ -35,7 +35,7 @@ class IphoneManager extends ContainerAware {
         return $this->container;
     }
 
-       private function setPage($page) {
+    private function setPage($page) {
         $this->page = $page;
     }
 
@@ -92,7 +92,7 @@ class IphoneManager extends ContainerAware {
 
     private function getCursor() {
         //limit genullt, dann alles ohne limit/paging
-        if ( !$this->getLimit() ) {
+        if( !$this->getLimit() ) {
             return $this->getCursorForAll();
         }
 
@@ -138,9 +138,9 @@ class IphoneManager extends ContainerAware {
 
         $results = array();
         while( $cursor->hasNext() ) {
-            $lib  =$cursor->getNext("lib");
+            $lib = $cursor->getNext("lib");
             $lib = $lib['lib'];
-            if(!in_array($lib, $results)) {
+            if( !in_array($lib, $results) ) {
                 $results[] = $lib;
             }
         }
@@ -205,7 +205,6 @@ class IphoneManager extends ContainerAware {
         $result = $this->getResults($query);
         return reset($result);
     }
-
 
 
     public function getEntriesByLibPrepared($lib, $page) {
@@ -487,6 +486,8 @@ class IphoneManager extends ContainerAware {
     }
 
     public function parseContent($lib, $locale) {
+
+
         $file = $this->getFilenameForLibAndLocale($lib, $locale);
 
         if( !file_exists($file) ) {
@@ -510,12 +511,19 @@ class IphoneManager extends ContainerAware {
 
     private function parseLine($lineContent) {
         if( $explode = explode("=", $lineContent) ) {
-            return array("key" => $this->cleanContent($explode[0]),
-                         "trl" => $this->cleanContent($explode[1]));
+            try {
+                $return = array("key" => $this->cleanContent($explode[0]),
+                                "trl" => $this->cleanContent($explode[1]));
+            } catch( \ErrorException $e ) {
+                throw new \ErrorException("Malformed string: " . $lineContent);
+            }
+
+            return $return;
         }
 
         return false;
     }
+
 
     private function cleanContent($string) {
         preg_match("#\"(.*?)\"#", $string, $match);
@@ -540,7 +548,6 @@ class IphoneManager extends ContainerAware {
         preg_match("/[^\/]+$/", $filename, $lib);
         return $lib[0];
     }
-
 
 
 }
