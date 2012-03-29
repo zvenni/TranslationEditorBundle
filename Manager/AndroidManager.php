@@ -57,7 +57,11 @@ class AndroidManager extends ContainerAware {
 
     public function getMongo() {
         if( !$this->mongo ) {
-            $this->mongo = new \Mongo($this->container->getParameter('translation_editor.mongodb'));
+            #$this->mongo = new \Mongo($this->container->getParameter('translation_editor.mongodb'));
+            $mungo = $this->container->get("doctrine.odm.mongodb.default_connection");
+            $mungo->initialize();
+            $this->mongo = $mungo->getMongo();
+            #$this->mongo->selectDB("translations");
         }
         if( !$this->mongo ) {
             throw new \Exception("failed to connect to mongo");
@@ -80,8 +84,8 @@ class AndroidManager extends ContainerAware {
 
     private function setPaging() {
         $limit = 50;
-        $allCount = $this->getCount($this->getQuery());
-        $skip = (int)($limit * ($this->getPage() - 1));
+        $allCount = intval($this->getCount($this->getQuery()));
+        $skip = intval($limit * ($this->getPage() - 1));
 
         $totalPages = ceil($allCount / $limit);
         $this->paging = array("limit" => $limit,

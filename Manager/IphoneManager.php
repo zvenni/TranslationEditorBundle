@@ -23,9 +23,6 @@ class IphoneManager extends ContainerAware {
 
     private $paging = array();
 
-    protected $mongo;
-
-    protected $query = array();
 
     public function __construct(ContainerInterface $container) {
         $this->setContainer($container);
@@ -73,7 +70,11 @@ class IphoneManager extends ContainerAware {
 
     public function getMongo() {
         if( !$this->mongo ) {
-            $this->mongo = new \Mongo($this->container->getParameter('translation_editor.mongodb'));
+            #$this->mongo = new \Mongo($this->container->getParameter('translation_editor.mongodb'));
+            $mungo = $this->container->get("doctrine.odm.mongodb.default_connection");
+            $mungo->initialize();
+            $this->mongo = $mungo->getMongo();
+            #$this->mongo->selectDB("translations");
         }
         if( !$this->mongo ) {
             throw new \Exception("failed to connect to mongo");
