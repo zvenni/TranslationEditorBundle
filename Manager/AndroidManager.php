@@ -221,10 +221,17 @@ class AndroidManager extends ContainerAware {
         $entries = array();
         $missing = array();
         $all = 0;
+        $locales = $this->getUsedLocales();
 
         foreach( $results as $data ) {
             $key = $data['keyOrig'];
             $entries[$key] = $data['entries'];
+            foreach( $locales as $locale ) {
+                if( !isset($entries[$key][$locale]) ) {
+                    $entries[$key][$locale] = "";
+                }
+            }
+
             $isAlpha = $this->isAlphabetic($key);
             if( $missed = $this->checkMissing($entries[$key]) ) {
                 $missing['entries'][$key] = $isAlpha;
@@ -353,14 +360,18 @@ class AndroidManager extends ContainerAware {
                 $locales[] = $locale;
             }
         }
-        #  td($locales);
+        #td($locales);
         return $locales;
     }
 
     public function extractLocaleFromFilename($filename) {
-        preg_match("/[^\/]?values_*/", $filename, $match);
-        $explode = explode("_", $match[1]);
-        return $explode[1];
+        preg_match("/[^\/]?values_(.*?)[\/]/", $filename, $match);
+#print_r($match);
+        return end($match);
+    }
+
+    public function extractLocaleFolderFromFilename($filename) {
+        return $this->getLocaleFolder($this->extractLocaleFromFilename($filename));
     }
 
 
@@ -383,7 +394,7 @@ class AndroidManager extends ContainerAware {
 ############################################################################
 
 
-    private function getSourceDir() {
+    public function getSourceDir() {
         return $this->getContainer()->getParameter('kernel.root_dir');
     }
 
@@ -477,7 +488,9 @@ class AndroidManager extends ContainerAware {
     }
 
     public function parseContent($lib, $locale) {
+
         $file = $this->getFilenameForLibAndLocale($lib, $locale);
+
         $return = array();
         if( file_exists($file) ) {
             //haut fehler wenn datei leer...
@@ -489,16 +502,23 @@ class AndroidManager extends ContainerAware {
             if( $parsed = $this->simpleXMLToArray($xml) ) {
 
                 foreach( $parsed['string'] as $content ) {
-                    $key = $content["name"];
-                    $trl = $content[0];
+
+                    try {
+                        $key = $content['name'];
+                    } catch( \ErrorException $e ) {
+                        #print_r($content);
+                        #td($lib ."::".$locale);
+                    }
+
+                    $trl = $content["0"];
+
                     $transformed = array("key" => $key,
                                          "trl" => $trl);
-
                     $return[] = $transformed;
                 }
             }
         }
-        #td($return);
+
         return $return;
     }
 

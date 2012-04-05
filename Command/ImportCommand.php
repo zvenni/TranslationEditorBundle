@@ -69,6 +69,7 @@ class ImportCommand extends Base {
     }
 
     public function import($filename) {
+
         $fname = basename($filename);
 
         $this->output->writeln("Processing <info>" . $filename . "</info>...");
@@ -81,6 +82,7 @@ class ImportCommand extends Base {
             case 'yml':
                 $m = $this->getManager($this->platform);
                 $lib = $m->extractLib($filename);
+
                 $entries = $this->concludeEntries($filename, $locale, $lib);
 
                 $data = $m->getCollection()->findOne(array('filename' => $filename));
@@ -93,14 +95,21 @@ class ImportCommand extends Base {
                                   'locale' => $locale,
                                   'type' => $type,
                                   'entries' => $entries,);
-
-                } elseif( $data && $this->fileChangedAfterImportOld($data) ) {
-                    throw new \Exception("File '" . $data['filename'] . "' has directly been changed after last import. Resolve on reverting files and editing in TranslationEditor");
-                    return;
+               # } elseif( $data && $this->fileChangedAfterImport($data) ) {
+                    #    throw new \Exception("File '" . $data['filename'] . "' has directly been changed after last import. Resolve on reverting files and editing in TranslationEditor");
+                    #    return;
+                } else {
+                    foreach( $entries as $key => $value ) {
+                        if( !isset($data['entries'][$key]) || !$data['entries'][$key] ) {
+                            $data['entries'][$key] = $entries[$key];
+                        }
+                    }
                 }
+
+
                 $this->output->writeln("  Found " . count($entries) . " entries...");
                 if( !$this->input->getOption('dry-run') ) {
-                   // $this->updateValue($data);
+                    $this->updateValue($data);
                 }
                 break;
             case 'xliff':
@@ -112,6 +121,7 @@ class ImportCommand extends Base {
     private function concludeEntries($filename, $locale, $lib) {
         $yamlFileLoader = new YamlFileLoader();
         $entries = $yamlFileLoader->load($filename, $locale, $lib)->all($lib);
+
         return $entries;
     }
 

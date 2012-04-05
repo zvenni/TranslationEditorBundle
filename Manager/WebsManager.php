@@ -107,7 +107,7 @@ class WebsManager extends ContainerAware {
     ####################     FILE           ####################################
     ############################################################################
 
-    private function getSourceDir() {
+    public function getSourceDir() {
         return $this->getContainer()->getParameter('kernel.root_dir') . '/../src';
     }
 
@@ -171,7 +171,7 @@ class WebsManager extends ContainerAware {
         return $bundle[0];
     }
 
-    private function extractLocaleFromFilename($filename) {
+    public function extractLocaleFromFilename($filename) {
         $fileExplode = explode(".", $filename);
         end($fileExplode);
         return prev($fileExplode);
@@ -205,7 +205,9 @@ class WebsManager extends ContainerAware {
 
             $locales = array();
             foreach( $finder2 as $file ) {
+
                 $locale = $this->extractLocaleFromFilename($file->getFilename());
+
                 if( !in_array($locale, $locales) ) {
                     $locales[] = $locale;
                 }

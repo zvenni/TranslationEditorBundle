@@ -250,7 +250,7 @@
                 {% endif %}
                 {% if ( not exists or translation|length == 0 ) and (trlKeys.missing.entries[key] is defined and ( locale != default or not trlKeys.missing.entries[key] )) %}
                 <span class="label important"
-                      onclick="Editor.showEditor(('{{loop.parent.loop.index}}-{{locale}}')">Missing</span>
+                      onclick="Editor.showEditor('{{loop.parent.loop.index}}-{{locale}}')">Missing</span>
                 {% endif %}
                 {% if ( not exists or translation|length == 0 ) and locale == default  and trlKeys.missing.entries[key]is defined and trlKeys.missing.entries[key] %}
                 <span style="background: #0069d6;" class="label less important"

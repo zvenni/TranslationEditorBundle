@@ -34,6 +34,7 @@ class ImportIphoneCommand extends Base {
         } else {
             //ale Sprachen holen
             $locales = $m->getUsedLocales();
+
             foreach( $locales as $locale ) {
                 //alle Libs
                 $filename = $m->getFilenameForLocale($locale);
@@ -98,32 +99,17 @@ class ImportIphoneCommand extends Base {
                         $data['entries'][$locale] = "";
                     }*/
 
-                #} elseif( $data && $this->fileChangedAfterImport($data) ) {
+                    #} elseif( $data && $this->fileChangedAfterImport($data) ) {
                     #  throw new \Exception("File '" . $data['filename'] . "' has directly been changed after last import . Resolve on reverting files and editing in TranslationEditor");
                     #   return;
                 } else {
 
 
-
                     $this->output->writeln("Key found - <info> (" . $locale . ")" . $data['keyOrig'] . "</info>...");
                     $data["dateImport"] = $dt;
-#if ( $locale == "de"&& $cnt['key'] == "test") {
-#    print_r($cnt['trl']);
-#}
-
-                    if( isset($cnt['trl']) && !empty($cnt['trl']) ) { #die("dssdds");
+                    if( !isset($data['entries'][$locale]) || !$data['entries'][$locale] ) {
                         $data['entries'][$locale] = $cnt['trl'];
-
-
                     }
-
-
-                    /*  if( $locale == "en" ) {
-                        $data['entries'][$locale] = "";
-                    } else {
-                        $data['entries'][$locale] = $cnt['trl'];
-                    }*/
-
 
                 }
                 if( !$this->input->getOption('dry-run') ) {
@@ -134,7 +120,8 @@ class ImportIphoneCommand extends Base {
         }
 
         $this->output->writeln("Import Complete - Locales: = <info>" . implode(", ", $locales) . "</info>...");
-        $this->output->writeln("Import Complete (" . $this->commandTime() . " seconds) - #Entries = <info>" . $m->getCount(array()) . "</info> with totally <info>" . $m->countWords() . " Words </info>");
+        $this->output->writeln("Import Complete (" . $this->commandTime() . " seconds) - #Entries = <info>" . $m->getCount(array()));
+        #$this->output->writeln("Import Complete (" . $this->commandTime() . " seconds) - #Entries = <info>" . $m->getCount(array()) . "</info> with totally <info>" . $m->countWords() . " Words </info>");
     }
 
 

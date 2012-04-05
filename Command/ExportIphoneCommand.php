@@ -43,8 +43,8 @@ class ExportIphoneCommand extends Base {
             $data = $m->getCollection()->findOne(array("lib" => $lib,
                                                       "platform" => $this->platform));
             if( $this->fileChangedAfterImportNew($data, $this->platform) ) {
-                throw new \Exception("File '" . $lib . "' has directly been changed after last import. Resolve on reverting files and editing in TranslationEditor");
-                return;
+             #   throw new \Exception("File '" . $lib . "' has directly been changed after last import. Resolve on reverting files and editing in TranslationEditor");
+             #   return;
             }
 
         }

@@ -37,8 +37,8 @@ private $platform = "webs";
         $output->writeln(sprintf("Check files on changes since last import before starting export..."));
         foreach( $results as $data ) {
             if( $this->fileChangedAfterImport($data) ) {
-                throw new \Exception("File '" . $data['filename'] . "' has directly been changed after last import. Resolve on reverting files and editing in TranslationEditor");
-                return;
+            #    throw new \Exception("File '" . $data['filename'] . "' has directly been changed after last import. Resolve on reverting files and editing in TranslationEditor");
+            #    return;
             }
         }
         unset($data);

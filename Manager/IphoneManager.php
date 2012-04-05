@@ -23,6 +23,10 @@ class IphoneManager extends ContainerAware {
 
     private $paging = array();
 
+    protected $mongo;
+
+    protected $query = array();
+
 
     public function __construct(ContainerInterface $container) {
         $this->setContainer($container);
@@ -319,18 +323,18 @@ class IphoneManager extends ContainerAware {
     }
 
     private function checkMissing(&$entries) {
-        $default = $this->getDefaultLanguage();
         $locales = $this->getUsedLocales();
+        $missing = false;
         foreach( $locales as $locale ) {
             if( !isset($entries[$locale]) || !$entries[$locale] ) {
                 $entries[$locale] = null;
                 #if( $locale != $default ) {
-                return true;
+                $missing = true;
                 #}
             }
         }
 
-        return false;
+        return $missing;
     }
 
 ############################################################################
@@ -410,6 +414,10 @@ class IphoneManager extends ContainerAware {
         return $this->localeForLanguage($lang);
     }
 
+    public function extractLocaleFolderFromFilename($filename) {
+        return $this->getLocaleFolder($this->extractLocaleFromFilename($filename));
+    }
+
     private function  getLocaleFolder($locale) {
         $lang = $this->languageForLocale($locale);
         return $lang . ".lproj";
@@ -419,13 +427,13 @@ class IphoneManager extends ContainerAware {
 ####################     FILE           ####################################
 ############################################################################
 
-
-    private function getSourceDir() {
+public function getSourceDir() {
         return $this->getContainer()->getParameter('kernel.root_dir');
     }
 
     private function getTranslationPath() {
         return $this->getSourceDir() . "/Resources/translations/" . $this->platform;
+
     }
 
     public function getFilenameForLocale($locale) {
@@ -516,7 +524,8 @@ class IphoneManager extends ContainerAware {
                 $return = array("key" => $this->cleanContent($explode[0]),
                                 "trl" => $this->cleanContent($explode[1]));
             } catch( \ErrorException $e ) {
-                throw new \ErrorException("Malformed string: " . $lineContent);
+              #  td($explode);
+                throw new \ErrorException("Malformed string" . $lineContent);
             }
 
             return $return;

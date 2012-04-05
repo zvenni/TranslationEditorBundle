@@ -68,6 +68,9 @@ class ImportAndroidCommand extends Base {
         foreach( $locales as $locale ) {
             $content = $m->parseContent($lib, $locale);
             foreach( $content as $cnt ) {
+
+
+
                 $translation = array();
                 #$this->output->writeln("Writing entry <info>'" . $cnt['key'] . "'</info>...");
                 $key = $cnt['key'];
@@ -91,16 +94,15 @@ class ImportAndroidCommand extends Base {
                                   "dateUpdate" => $dt);
 
 
-                } elseif( $data && $this->fileChangedAfterImport($data) ) {
+               # } elseif( $data && $this->fileChangedAfterImport($data) ) {
                  ##   throw new \Exception("File '" . $data['filename'] . "' has directly been changed after last import . Resolve on reverting files and editing in TranslationEditor");
                  #  return;
+
                 } else {
                     $this->output->writeln("Key found - <info>update</info>...");
                     $data["dateImport"] = $dt;
-                    $data['entries'][$locale] = $cnt['trl'];
-                    if ( $locale == "en" ) {
-                        $data['entries'][$locale] = "";
-                    } else {
+                 //nur eintragen wenn key ini dieser sdprache noch nicht in db
+                    if( !isset($data['entries'][$locale])  || !$data['entries'][$locale]) {
                         $data['entries'][$locale] = $cnt['trl'];
                     }
                 }
@@ -125,8 +127,6 @@ class ImportAndroidCommand extends Base {
         $collection = $this->getManager($this->platform)->getCollection();
         $collection->ensureIndex(array("platform" => 1,
                                       "key" => 1));
-
-
     }
 
     protected function updateValue($data) {
